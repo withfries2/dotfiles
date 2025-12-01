@@ -1,0 +1,21 @@
+## Chezmoi Configuration Variables
+
+[data]
+# Global default values (assuming Windows-style keyboard and external display is standard)
+keyboard_layout = "Windows"
+has_external_display = true
+display_resolution = "3840x2160"
+
+## --- Host Specific Overrides ---
+
+[data.beelink-pc-name] # <-- IMPORTANT: Replace 'beelink-pc-name' with the Beelink's ACTUAL HOSTNAME
+is_gui_machine = true
+keyboard_layout = "Windows"
+display_resolution = "3840x2160"
+has_external_display = true 
+
+[data.red-chromebook-omarchy]
+is_gui_machine = true
+keyboard_layout = "Chromebook"
+display_resolution = "1920x1080"
+has_external_display = false

@@ -21,6 +21,7 @@ export GNOME_KEYRING_CONTROL="/run/user/$UID/keyring"
 . "$HOME/.local/share/../bin/env"
 
 alias m='micro'
+alias px='ssh root@192.168.1.10'
 
 function y() {
 	local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
@@ -30,3 +31,4 @@ function y() {
 	fi
 	rm -f -- "$tmp"
 }
+export EDITOR="micro"
