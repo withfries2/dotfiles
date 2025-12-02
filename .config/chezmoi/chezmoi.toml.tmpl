@@ -1,21 +1,36 @@
 ## Chezmoi Configuration Variables
 
 [data]
-# Global default values (assuming Windows-style keyboard and external display is standard)
+# Global defaults assumed for the most common desktop setup (Windows keyboard, 4K display).
 keyboard_layout = "Windows"
 has_external_display = true
 display_resolution = "3840x2160"
+# Global environment variables
+env = {
+  GDK_SCALE = "1.25", # Default scaling factor for HiDPI
+}
 
 ## --- Host Specific Overrides ---
 
-[data.beelink-pc-name] # <-- IMPORTANT: Replace 'beelink-pc-name' with the Beelink's ACTUAL HOSTNAME
+# 💻 Beelink Desktop PC Configuration
+# Use the Beelink's actual hostname here (e.g., 'data.beelink-desktop-pc')
+[data.beelink-pc-name] 
 is_gui_machine = true
 keyboard_layout = "Windows"
 display_resolution = "3840x2160"
 has_external_display = true 
+env = {
+  GDK_SCALE = "1.25", 
+}
 
-[data.red-chromebook-omarchy]
+# 💻 Omarchy Laptop PC Configuration (Similar to the Chromebook)
+# Use the laptop's actual hostname (e.g., 'data.omarchy-laptop')
+[data.omarchy-laptop-name] 
 is_gui_machine = true
-keyboard_layout = "Chromebook"
+# Assuming this laptop has a standard keyboard/display, but is a laptop.
+keyboard_layout = "Windows" 
 display_resolution = "1920x1080"
-has_external_display = false
+has_external_display = false 
+env = {
+  GDK_SCALE = "1", # No scaling needed for 1080p
+}

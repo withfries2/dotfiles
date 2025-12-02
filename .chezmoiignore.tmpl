@@ -1,4 +1,4 @@
-{{- if not .omarchy.is_gui_machine }}
+{{ if or (eq .role "desktop") (eq .role "laptop") }}
 .config/alacritty
 .config/ghostty
 .config/hypr

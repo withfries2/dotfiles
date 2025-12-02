@@ -1,0 +1,63 @@
+# If not running interactively, don't do anything (leave this at the top of this file)
+[[ $- != *i* ]] && return
+
+{{ if eq .chezmoi.osRelease.id "arch" }}
+source ~/.local/share/omarchy/default/bash/rc
+{{ else }}	# Add Omarchy-style shell aliases for non-Omarchy machines
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+alias cd='zd'
+alias d='docker'
+alias decompress='tar -xzf'
+alias ff='fzf --preview '\''bat --style=numbers --color=always {}'\'''
+alias g='git'
+alias gcad='git commit -a --amend'
+alias gcam='git commit -a -m'
+alias gcm='git commit -m'
+alias ls='eza -lh --group-directories-first --icons=auto'
+alias lsa='ls -a'
+alias lt='eza --tree --level=2 --long --icons --git'
+alias lta='lt -a'
+{{ end }}
+
+# --------------------------------
+# Shared environment for all roles
+# --------------------------------
+
+export GNOME_KEYRING_CONTROL="/run/user/$UID/keyring"
+
+. "$HOME/.local/share/../bin/env"
+
+# CLI / TUI aliases (always available)
+alias m='micro'
+alias px='ssh root@192.168.1.10'
+alias sp='ssh root@192.168.1.10'
+
+function y() {
+        local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+        yazi "$@" --cwd-file="$tmp"
+        if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
+                builtin cd -- "$cwd"
+        fi
+        rm -f -- "$tmp"
+}
+
+# --------------------
+# Default applications
+# --------------------
+
+export EDITOR="micro"
+
+# -----------------------------
+# GUI-only aliases and settings
+# -----------------------------
+
+{{- if or (eq .role "desktop") (eq .role "laptop") }}
+# alias code='code'
+alias web='google-chrome-stable'
+alias browser='google-chrome-stable'
+alias chrome='google-chrome-stable'
+alias ci='google-chrome-stable --incognito'
+export BROWSER="google-chrome-stable"
+{{- end }}
