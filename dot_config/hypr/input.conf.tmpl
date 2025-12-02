@@ -1,0 +1,34 @@
+# Control your input devices
+# See https://wiki.hypr.land/Configuring/Variables/#input
+{{- if or (eq .role "desktop") (eq .role "laptop") }}
+input {
+  {{- $hostname := .chezmoi.hostname }}
+  
+  # Default key options
+  kb_options = compose:caps,altwin:swap_lalt_lwin
+
+  {{- if eq $hostname "beelink-desktop-omarchy" }}
+  # Beelink desktop with Keychron K8 Pro mechanical KB
+  kb_options = compose:caps,altwin:swap_lalt_lwin
+
+  {{- else if eq $hostname "lg-gram-omarchy" }}
+  # LG Gram laptop keyboard layout specifics
+  kb_options = compose:caps,win:super,altwin:swap_alt_win
+
+  {{- else if eq $hostname "red-chromebook-omarchy" }}
+  # Samsung Galaxy Chromebook2 with Search->Alt remapping
+  kb_options = compose:caps,altwin:ctrl_lwin,lwin:super,caps:alt
+
+  {{- end }}
+
+  repeat_rate = 40
+  repeat_delay = 600
+
+  touchpad {
+    scroll_factor = 0.4
+  }
+}
+
+# Scroll faster in the terminal
+windowrule = scrolltouchpad 1.5, tag:terminal
+{{- end }}
