@@ -1,4 +1,5 @@
-{{ if eq .role "server" }}
+{{- $role := index . "role" | default "" -}}
+{{- if eq $role "server" }}
 .config/alacritty
 .config/ghostty
 .config/hypr
