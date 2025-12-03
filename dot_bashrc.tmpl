@@ -9,7 +9,6 @@ source ~/.local/share/omarchy/default/bash/rc
 alias ..='cd ..'
 alias ...='cd ../..'
 alias ....='cd ../../..'
-alias cd='zd'
 alias d='docker'
 alias decompress='tar -xzf'
 alias ff='fzf --preview '\''bat --style=numbers --color=always {}'\'''
@@ -21,6 +20,17 @@ alias ls='eza -lh --group-directories-first --icons=auto'
 alias lsa='ls -a'
 alias lt='eza --tree --level=2 --long --icons --git'
 alias lta='lt -a'
+
+# Debian-specific: Use better alternatives
+alias cat='batcat'
+alias bat='batcat'
+alias fd='fdfind'
+
+# Quick navigation
+alias cdd='cd ~/docker'
+
+# Initialize zoxide (replaces cd with smart directory jumping)
+eval "$(zoxide init bash --cmd cd)"
 {{- end }}
 
 # --------------------------------
