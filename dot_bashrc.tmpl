@@ -26,14 +26,64 @@ alias lta='lt -a'
 # --------------------------------
 # Shared environment for all roles
 # --------------------------------
-
 export GNOME_KEYRING_CONTROL="/run/user/$UID/keyring"
 
+# --------------------
+# Default applications
+# --------------------
+export EDITOR="micro"
+export VISUAL="code"
+
+# --------------------------------
 # CLI / TUI aliases (always available)
+# --------------------------------
 alias m='micro'
 alias px='ssh root@192.168.1.10'
 alias sp='ssh root@192.168.1.10'
 
+# Chezmoi shortcuts
+alias cm='chezmoi'
+alias cma='chezmoi apply -v'
+alias cme='chezmoi edit'
+alias cmd='chezmoi diff'
+alias cmu='chezmoi update'
+alias cmcd='chezmoi cd'
+
+# System monitoring
+alias meminfo='free -m -l -t'
+alias diskinfo='lsblk -o NAME,SIZE,TYPE,MOUNTPOINT'
+alias ports='ss -tulanp'
+
+# Network utilities
+alias myip='curl -s ifconfig.me'
+alias localip='ip -br addr show'
+
+# Docker shortcuts
+alias dps='docker ps --format "table {{`{{.Names}}`}}\t{{`{{.Status}}`}}\t{{`{{.Ports}}`}}"'
+alias dpsa='docker ps -a --format "table {{`{{.Names}}`}}\t{{`{{.Status}}`}}"'
+alias dclean='docker system prune -af'
+alias dimg='docker images --format "table {{`{{.Repository}}`}}\t{{`{{.Tag}}`}}\t{{`{{.Size}}`}}"'
+alias dstats='docker stats --no-stream'
+
+# Docker Compose shortcuts
+alias dc='docker compose'
+alias dcu='docker compose up -d'
+alias dcd='docker compose down'
+alias dcr='docker compose restart'
+alias dcl='docker compose logs -f --tail=50'
+alias dcp='docker compose pull'
+
+# Git enhancements
+alias gst='git status -sb'
+alias glog='git log --oneline --graph --decorate --all'
+alias gdiff='git diff --color-words'
+alias gaa='git add --all'
+
+# Quick config edits
+alias reload='source ~/.bashrc'
+alias bashrc='${EDITOR} ~/.bashrc && source ~/.bashrc'
+
+# Yazi with shell wrapper
 function y() {
     local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
     yazi "$@" --cwd-file="$tmp"
@@ -43,20 +93,11 @@ function y() {
     rm -f -- "$tmp"
 }
 
-# --------------------
-# Default applications
-# --------------------
-
-export EDITOR="micro"
-export VISUAL="code"
-
 # -----------------------------
 # GUI-only aliases and settings
 # -----------------------------
-
 {{- $role := index . "role" | default "" -}}
 {{- if or (eq $role "desktop") (eq $role "laptop") }}
-# alias code='code'
 alias web='google-chrome-stable'
 alias browser='google-chrome-stable'
 alias chrome='google-chrome-stable'
