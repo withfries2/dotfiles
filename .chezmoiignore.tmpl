@@ -1,4 +1,4 @@
-{{- $role := index . "role" | default "" -}}
+{{- $role := index . "role" | default "desktop" -}}
 {{- if eq $role "server" }}
 .config/alacritty
 .config/ghostty
