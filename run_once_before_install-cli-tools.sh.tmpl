@@ -1,13 +1,17 @@
 #!/bin/bash
 {{- $role := index . "role" | default "desktop" }}
 
-if [ "$EUID" -eq 0 ]; then
-    alias sudo=''
-fi
-
 # Install CLI tools and TUIs on all machines
-
 set -euo pipefail
+
+# Handle sudo when running as root
+sudo() {
+    if [ "$EUID" -eq 0 ]; then
+        "$@"
+    else
+        command sudo "$@"
+    fi
+}
 
 echo "=== Installing CLI & TUI Tools ==="
 echo "Role: {{ $role }}"
