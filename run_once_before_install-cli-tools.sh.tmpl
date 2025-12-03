@@ -1,0 +1,307 @@
+#!/bin/bash
+{{- $role := index . "role" | default "desktop" -}}
+# Install CLI tools and TUIs on all machines
+
+set -euo pipefail
+
+echo "=== Installing CLI & TUI Tools ==="
+echo "Role: {{ $role }}"
+echo "OS: $(uname -s)"
+echo ""
+
+# Detect OS and package manager
+detect_os() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        echo "macos"
+    elif [[ -f /etc/arch-release ]]; then
+        echo "arch"
+    elif [[ -f /etc/fedora-release ]]; then
+        echo "fedora"
+    elif [[ -f /etc/debian_version ]]; then
+        echo "debian"
+    else
+        echo "unknown"
+    fi
+}
+
+OS_TYPE=$(detect_os)
+
+install_arch() {
+    echo "📦 Installing packages for Arch Linux..."
+    
+    # Core packages (official repos)
+    local core_packages=(
+        # Shell enhancements
+        fzf zoxide starship
+        
+        # Modern CLI replacements
+        ripgrep fd bat eza dust duf procs sd
+        
+        # File management & navigation
+        yazi tree
+        
+        # System monitoring
+        btop htop bottom nethogs bandwhich
+        
+        # Git tools
+        lazygit delta
+        
+        # Text tools
+        micro tldr
+        
+        # Archive & media tools
+        p7zip ffmpeg imagemagick poppler jq
+        
+        # Network tools
+        curl wget httpie dog
+        
+        # Dev tools
+        github-cli tokei hyperfine
+        
+        # System utilities
+        rsync unzip zip
+        
+        # Optional but useful
+        fastfetch glow
+    )
+    
+    echo "Installing core packages..."
+    sudo pacman -S --needed --noconfirm "${core_packages[@]}"
+    
+    # AUR packages (require yay or paru)
+    local aur_packages=(
+        # TUIs
+        lazydocker
+        bluetui
+        
+        # Modern tools
+        gdu               # Fast disk usage
+        
+        # Yazi extras
+        ueberzugpp        # Image preview (optional)
+    )
+    
+    if command -v yay &> /dev/null; then
+        echo ""
+        echo "Installing AUR packages via yay..."
+        yay -S --needed --noconfirm "${aur_packages[@]}" 2>/dev/null || {
+            echo "⚠ Some AUR packages failed, continuing..."
+        }
+    elif command -v paru &> /dev/null; then
+        echo ""
+        echo "Installing AUR packages via paru..."
+        paru -S --needed --noconfirm "${aur_packages[@]}" 2>/dev/null || {
+            echo "⚠ Some AUR packages failed, continuing..."
+        }
+    else
+        echo "⚠ No AUR helper (yay/paru) found"
+        echo "  Install manually: ${aur_packages[*]}"
+    fi
+    
+    echo "✓ Arch packages installed"
+}
+
+install_fedora() {
+    echo "📦 Installing packages for Fedora..."
+    
+    local packages=(
+        # Shell enhancements
+        fzf zoxide starship
+        
+        # Modern CLI replacements
+        ripgrep fd-find bat eza dust duf procs sd
+        
+        # File management
+        tree
+        
+        # System monitoring
+        btop htop nethogs bandwhich
+        
+        # Git tools
+        git-delta
+        
+        # Text tools
+        micro tldr
+        
+        # Archive & media tools
+        p7zip ffmpeg ImageMagick poppler-utils jq
+        
+        # Network tools
+        curl wget httpie
+        
+        # Dev tools
+        gh tokei hyperfine
+        
+        # System utilities
+        rsync unzip zip
+        
+        # Optional
+        glow
+    )
+    
+    echo "Installing packages..."
+    sudo dnf install -y "${packages[@]}"
+    
+    # Additional packages from copr or manual install
+    echo ""
+    echo "Note: Some tools need manual installation on Fedora:"
+    echo "  - lazygit: https://github.com/jesseduffield/lazygit"
+    echo "  - lazydocker: https://github.com/jesseduffield/lazydocker"
+    echo "  - yazi: cargo install --locked yazi-fm"
+    echo "  - bluetui: cargo install bluetui"
+    echo "  - bottom: cargo install bottom"
+    echo "  - dog: cargo install dog"
+    
+    echo "✓ Fedora packages installed"
+}
+
+install_debian() {
+    echo "📦 Installing packages for Debian/Ubuntu/ChromeOS Linux..."
+    
+    # Update package list
+    sudo apt update
+    
+    local packages=(
+        # Shell enhancements
+        fzf zoxide
+        
+        # Modern CLI replacements
+        ripgrep fd-find bat
+        
+        # File management
+        tree ncdu
+        
+        # System monitoring
+        btop htop nethogs
+        
+        # Text tools
+        micro
+        
+        # Archive & media tools
+        p7zip-full ffmpeg imagemagick poppler-utils jq
+        
+        # Network tools
+        curl wget httpie
+        
+        # System utilities
+        rsync unzip zip
+    )
+    
+    echo "Installing packages..."
+    sudo apt install -y "${packages[@]}"
+    
+    # Many modern tools not in Debian repos, suggest alternatives
+    echo ""
+    echo "Note: Some tools need manual installation or cargo:"
+    echo "  - eza: cargo install eza"
+    echo "  - dust: cargo install du-dust"
+    echo "  - duf: https://github.com/muesli/duf/releases"
+    echo "  - procs: cargo install procs"
+    echo "  - sd: cargo install sd"
+    echo "  - lazygit: https://github.com/jesseduffield/lazygit/releases"
+    echo "  - lazydocker: https://github.com/jesseduffield/lazydocker/releases"
+    echo "  - yazi: cargo install --locked yazi-fm"
+    echo "  - delta: cargo install git-delta"
+    echo "  - tokei: cargo install tokei"
+    echo "  - hyperfine: cargo install hyperfine"
+    echo "  - bottom: cargo install bottom"
+    echo "  - bandwhich: cargo install bandwhich"
+    echo "  - dog: cargo install dog"
+    echo "  - glow: https://github.com/charmbracelet/glow/releases"
+    echo "  - gdu: https://github.com/dundee/gdu/releases"
+    echo "  - bluetui: cargo install bluetui"
+    
+    # Install starship (cross-platform installer)
+    if ! command -v starship &> /dev/null; then
+        echo ""
+        echo "Installing starship prompt..."
+        curl -sS https://starship.rs/install.sh | sh -s -- -y
+    fi
+    
+    echo "✓ Debian packages installed"
+}
+
+install_macos() {
+    echo "📦 Installing packages for macOS..."
+    
+    # Check for Homebrew
+    if ! command -v brew &> /dev/null; then
+        echo "⚠ Homebrew not found!"
+        echo "Install from: https://brew.sh"
+        echo "Then run: chezmoi apply"
+        exit 1
+    fi
+    
+    local packages=(
+        # Shell enhancements
+        fzf zoxide starship
+        
+        # Modern CLI replacements
+        ripgrep fd bat eza dust duf procs sd
+        
+        # File management
+        yazi tree
+        
+        # System monitoring
+        btop htop bottom bandwhich
+        
+        # Git tools
+        lazygit lazydocker delta
+        
+        # Text tools
+        micro tldr
+        
+        # Archive & media tools
+        p7zip ffmpeg imagemagick poppler jq
+        
+        # Network tools
+        curl wget httpie dog
+        
+        # Dev tools
+        gh tokei hyperfine
+        
+        # System utilities
+        rsync
+        
+        # Optional
+        fastfetch glow gdu
+    )
+    
+    echo "Installing packages..."
+    brew install "${packages[@]}"
+    
+    # Note about bluetui (may need cargo)
+    echo ""
+    echo "Note: bluetui may need: cargo install bluetui"
+    
+    echo "✓ macOS packages installed"
+}
+
+# Install based on detected OS
+case "$OS_TYPE" in
+    arch)
+        install_arch
+        ;;
+    fedora)
+        install_fedora
+        ;;
+    debian)
+        install_debian
+        ;;
+    macos)
+        install_macos
+        ;;
+    *)
+        echo "❌ Unsupported OS"
+        exit 1
+        ;;
+esac
+
+echo ""
+echo "🎉 CLI & TUI tools installation complete!"
+echo ""
+echo "Recommended next steps:"
+echo "  - Configure zoxide: Add to shell rc"
+echo "  - Configure starship: starship preset nerd-font-symbols -o ~/.config/starship.toml"
+echo "  - Test yazi: yazi"
+echo "  - Test lazygit: lazygit"
