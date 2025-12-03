@@ -1,5 +1,10 @@
 #!/bin/bash
 {{- $role := index . "role" | default "desktop" }}
+
+if [ "$EUID" -eq 0 ]; then
+    alias sudo=''
+fi
+
 # Install CLI tools and TUIs on all machines
 
 set -euo pipefail
