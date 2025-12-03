@@ -1,4 +1,5 @@
 #!/bin/bash
+{{- $role := index . "role" | default "desktop" }}
 {{- if ne .role "server" }}
 # Install developer fonts on non-server machines
 
