@@ -25,8 +25,6 @@ alias bat='batcat'
 alias fd='fdfind'
 # Quick navigation
 alias cdd='builtin cd /docker'
-# Initialize zoxide (replaces cd with smart directory jumping)
-eval "$(zoxide init bash --cmd cd)"
 # Initialize starship prompt
 eval "$(starship init bash)"
 {{- end }}
@@ -109,4 +107,9 @@ alias browser='google-chrome-stable'
 alias chrome='google-chrome-stable'
 alias ci='google-chrome-stable --incognito'
 export BROWSER="google-chrome-stable"
+{{- end }}
+
+# Initialize zoxide LAST (for all non-Arch systems)
+{{- if ne (index .chezmoi "osRelease").id "arch" }}
+eval "$(zoxide init bash --cmd cd)"
 {{- end }}
