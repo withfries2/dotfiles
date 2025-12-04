@@ -64,12 +64,14 @@ alias ports='ss -tulanp'
 # Network utilities
 alias myip='curl -s ifconfig.me'
 alias localip='ip -br addr show'
+
 # Docker shortcuts
-alias dps='docker ps --format "table {`{{.Names}}`}}\t{`{{.Status}}`}}\t{`{{.Ports}}`}}"'
-alias dpsa='docker ps -a --format "table {`{{.Names}}`}}\t{`{{.Status}}`}}"'
+alias dps='docker ps --format "table {{`{{.Names}}`}}\t{{`{{.Status}}`}}\t{{`{{.Ports}}`}}"'
+alias dpsa='docker ps -a --format "table {{`{{.Names}}`}}\t{{`{{.Status}}`}}"'
+alias dimg='docker images --format "table {{`{{.Repository}}`}}\t{{`{{.Tag}}`}}\t{{`{{.Size}}`}}"'
 alias dclean='docker system prune -af'
-alias dimg='docker images --format "table {`{{.Repository}}`}}\t{`{{.Tag}}`}}\t{`{{.Size}}`}}"'
 alias dstats='docker stats --no-stream'
+
 # Docker Compose shortcuts
 alias dc='docker compose'
 alias dcu='docker compose up -d'
@@ -77,14 +79,17 @@ alias dcd='docker compose down'
 alias dcr='docker compose restart'
 alias dcl='docker compose logs -f --tail=50'
 alias dcp='docker compose pull'
+
 # Git enhancements
 alias gst='git status -sb'
 alias glog='git log --oneline --graph --decorate --all'
 alias gdiff='git diff --color-words'
 alias gaa='git add --all'
+
 # Quick config edits
 alias reload='source ~/.bashrc'
 alias bashrc='${EDITOR} ~/.bashrc && source ~/.bashrc'
+
 # Yazi with shell wrapper
 function y() {
     local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
