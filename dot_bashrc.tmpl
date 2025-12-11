@@ -2,6 +2,20 @@
 #
 # If not running interactively, don't do anything (leave this at the top of this file)
 [[ $- != *i* ]] && return
+
+# Add ~/.local/bin and /usr/local/bin to PATH if not already there
+if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+    export PATH="$HOME/.local/bin:$PATH"
+fi
+if [[ ":$PATH:" != *":/usr/local/bin:"* ]]; then
+    export PATH="/usr/local/bin:$PATH"
+fi
+
+# Rust / cargo
+if [ -f "$HOME/.cargo/env" ]; then
+  . "$HOME/.cargo/env"
+fi
+
 {{- if eq (index .chezmoi "osRelease").id "arch" }}
 source ~/.local/share/omarchy/default/bash/rc
 {{- else }}  # Add Omarchy-style shell aliases for non-Omarchy machines
@@ -39,18 +53,6 @@ fi
 # --------------------------------
 export GNOME_KEYRING_CONTROL="/run/user/$UID/keyring"
 
-# Add ~/.local/bin and /usr/local/bin to PATH if not already there
-if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
-    export PATH="$HOME/.local/bin:$PATH"
-fi
-if [[ ":$PATH:" != *":/usr/local/bin:"* ]]; then
-    export PATH="/usr/local/bin:$PATH"
-fi
-
-# Rust / cargo
-if [ -f "$HOME/.cargo/env" ]; then
-  . "$HOME/.cargo/env"
-fi
 
 # --------------------
 # Default applications
