@@ -35,6 +35,47 @@ detect_os() {
 
 OS_TYPE=$(detect_os)
 
+ensure_rust_and_cargo() {
+    if command -v cargo &> /dev/null; then
+        echo "cargo already installed"
+        return
+    fi
+
+    echo ""
+    echo "Installing Rust toolchain (rustup + cargo)..."
+    # Non-interactive rustup install, default profile, stable toolchain
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+
+    # Ensure cargo is on PATH for the rest of this script
+    export PATH="$HOME/.cargo/bin:$PATH"
+
+    if ! command -v cargo &> /dev/null; then
+        echo "❌ Failed to install cargo (Rust toolchain)"
+        return 1
+    fi
+
+    echo "✓ Rust toolchain installed"
+}
+
+cargo_install_if_missing() {
+    local crate="$1"
+    local bin_name="${2:-$1}"
+
+    if command -v "$bin_name" &> /dev/null; then
+        echo "  - $bin_name already installed, skipping"
+        return
+    fi
+
+    echo "  - Installing $bin_name via cargo ($crate)..."
+    if cargo install "$crate" &> /dev/null; then
+        echo "    ✓ $bin_name installed"
+    else
+        echo "    ⚠ Failed to install $bin_name"
+    fi
+}
+
+
+
 install_arch() {
     echo "📦 Installing packages for Arch Linux..."
     
@@ -163,44 +204,74 @@ install_fedora() {
 
 install_debian() {
     echo "📦 Installing packages for Debian/Ubuntu/ChromeOS Linux..."
-    
+
     sudo apt update
-    
+
     local packages=(
-        fzf zoxide ripgrep fd-find bat tree ncdu btop htop nethogs
-        micro p7zip-full ffmpeg imagemagick poppler-utils jq
-        curl wget httpie rsync unzip zip
+        # Shell / navigation
+        fzf zoxide
+
+        # Modern CLI replacements
+        ripgrep fd-find bat tree ncdu eza
+
+        # System monitoring
+        btop htop nethogs
+
+        # Editors / text tools
+        micro
+
+        # Archive & media tools (for previews & general use)
+        p7zip-full ffmpeg imagemagick poppler-utils jq
+
+        # Network / HTTP tools
+        curl wget httpie
+
+        # Git / VCS helpers
+        lazygit
+
+        # System utilities
+        rsync unzip zip
     )
-    
-    echo "Installing packages..."
+
+    echo "Installing packages via apt..."
     sudo apt install -y "${packages[@]}"
-    
+
     echo ""
-    echo "Note: Many modern tools need cargo or manual install:"
-    echo "  - eza: cargo install eza"
-    echo "  - dust: cargo install du-dust"
-    echo "  - duf: https://github.com/muesli/duf/releases"
-    echo "  - procs: cargo install procs"
-    echo "  - sd: cargo install sd"
-    echo "  - lazygit: https://github.com/jesseduffield/lazygit/releases"
-    echo "  - lazydocker: https://github.com/jesseduffield/lazydocker/releases"
-    echo "  - yazi: cargo install --locked yazi-fm"
-    echo "  - delta: cargo install git-delta"
-    echo "  - tokei: cargo install tokei"
-    echo "  - hyperfine: cargo install hyperfine"
-    echo "  - bottom: cargo install bottom"
-    echo "  - bandwhich: cargo install bandwhich"
-    echo "  - dog: cargo install dog"
-    echo "  - glow: https://github.com/charmbracelet/glow/releases"
-    echo "  - gdu: https://github.com/dundee/gdu/releases"
-    echo "  - bluetui: cargo install bluetui"
-    
+    echo "Ensuring Rust + cargo are available for Rust-based CLIs..."
+    if ensure_rust_and_cargo; then
+        echo ""
+        echo "Installing Rust-based CLIs via cargo..."
+        # Ensure cargo is on PATH in case rustup just ran
+        export PATH="$HOME/.cargo/bin:$PATH"
+
+        # Core Rust tools
+        cargo_install_if_missing du-dust dust        # dust
+        cargo_install_if_missing procs procs         # procs
+        cargo_install_if_missing sd sd               # sd
+        cargo_install_if_missing yazi-fm yazi        # yazi
+        cargo_install_if_missing git-delta delta     # git delta
+        cargo_install_if_missing tokei tokei         # tokei
+        cargo_install_if_missing hyperfine hyperfine # hyperfine
+        cargo_install_if_missing bottom bottom       # bottom
+        cargo_install_if_missing bandwhich bandwhich # bandwhich
+        cargo_install_if_missing dog dog             # dog
+        cargo_install_if_missing bluetui bluetui     # bluetui
+
+        # Tools that also have binary releases, but cargo is fine here:
+        cargo_install_if_missing lazydocker lazydocker
+
+        # gdu is Go-based, not Rust, so we leave it to manual/binary install:
+        echo "  - gdu: install from https://github.com/dundee/gdu/releases if desired"
+    else
+        echo "⚠ Skipping cargo-based tools (Rust toolchain not available)"
+    fi
+
     if ! command -v starship &> /dev/null; then
         echo ""
         echo "Installing starship prompt..."
         curl -sS https://starship.rs/install.sh | sh -s -- -y
     fi
-    
+
     echo "✓ Debian packages installed"
 }
 
