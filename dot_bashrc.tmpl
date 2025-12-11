@@ -43,6 +43,12 @@ fi
 if [[ ":$PATH:" != *":/usr/local/bin:"* ]]; then
     export PATH="/usr/local/bin:$PATH"
 fi
+
+# Rust / cargo
+if [ -f "$HOME/.cargo/env" ]; then
+  . "$HOME/.cargo/env"
+fi
+
 # --------------------
 # Default applications
 # --------------------
@@ -61,6 +67,7 @@ alias cme='chezmoi edit'
 alias cmd='chezmoi diff'
 alias cmu='chezmoi update'
 alias cmcd='chezmoi cd'
+alias cmhome='chezmoi cd'
 alias cmr='cmu && cma && source ~/.bashrc'  # Reload the entire chezmoi config and refresh the shell
 # System monitoring
 alias meminfo='free -m -l -t'
