@@ -74,6 +74,21 @@ cargo_install_if_missing() {
     fi
 }
 
+# New function: Installs the latest version of micro via the official upstream binary script.
+install_micro_binary() {
+    if command -v micro &> /dev/null; then
+        echo "  - micro already installed (via package manager or previous run)."
+        echo "    Attempting to install/update via official binary script for latest version..."
+    fi
+
+    # The official install script detects the OS and installs the correct binary.
+    # We pipe the script to bash and use sudo for system-wide installation.
+    if curl -sL https://install.micro.mu | sudo bash; then
+        echo "    ✓ micro binary installed/updated successfully"
+    else
+        echo "    ⚠ Failed to install/update micro via binary script."
+    fi
+}
 
 
 install_arch() {
@@ -97,7 +112,7 @@ install_arch() {
         lazygit git-delta
 
         # Text tools
-        micro tldr
+        tldr # Removed 'micro' for binary install
 
         # Archive & media tools (for yazi previews & general use)
         p7zip ffmpeg imagemagick poppler jq
@@ -120,6 +135,9 @@ install_arch() {
         echo "⚠ Some packages failed to install"
         echo "Continuing with AUR packages..."
     }
+
+    # Install micro via the official binary script
+    install_micro_binary
 
     # AUR packages (require yay or paru)
     local aur_packages=(
@@ -181,13 +199,16 @@ install_fedora() {
 
     local packages=(
         fzf zoxide starship ripgrep fd-find bat eza dust duf procs sd
-        tree btop htop nethogs bandwhich git-delta micro tldr
+        tree btop htop nethogs bandwhich git-delta tldr # Removed 'micro' for binary install
         p7zip ffmpeg ImageMagick poppler-utils jq curl wget httpie
         gh tokei hyperfine rsync unzip zip glow
     )
 
     echo "Installing packages..."
     sudo dnf install -y "${packages[@]}"
+
+    # Install micro via the official binary script
+    install_micro_binary
 
     echo ""
     echo "Note: Some tools need manual installation on Fedora:"
@@ -218,7 +239,7 @@ install_debian() {
         btop htop nethogs
 
         # Editors / text tools
-        micro
+        # micro <-- Removed for binary install
 
         # Archive & media tools (for previews & general use)
         p7zip-full ffmpeg imagemagick poppler-utils jq
@@ -236,6 +257,9 @@ install_debian() {
     echo "Installing packages via apt..."
     sudo apt install -y "${packages[@]}"
 
+    # Install micro via the official binary script
+    install_micro_binary
+
     echo ""
     echo "Ensuring Rust + cargo are available for Rust-based CLIs..."
     if ensure_rust_and_cargo; then
@@ -245,20 +269,20 @@ install_debian() {
         export PATH="$HOME/.cargo/bin:$PATH"
 
         # Core Rust tools (all roles)
-        cargo_install_if_missing du-dust dust        # dust
-        cargo_install_if_missing procs procs         # procs
-        cargo_install_if_missing sd sd               # sd
-        cargo_install_if_missing yazi-fm yazi        # yazi
-        cargo_install_if_missing git-delta delta     # git delta
-        cargo_install_if_missing tokei tokei         # tokei
+        cargo_install_if_missing du-dust dust          # dust
+        cargo_install_if_missing procs procs           # procs
+        cargo_install_if_missing sd sd                # sd
+        cargo_install_if_missing yazi-fm yazi         # yazi
+        cargo_install_if_missing git-delta delta      # git delta
+        cargo_install_if_missing tokei tokei          # tokei
         cargo_install_if_missing hyperfine hyperfine # hyperfine
-        cargo_install_if_missing bottom bottom       # bottom
+        cargo_install_if_missing bottom bottom        # bottom
         cargo_install_if_missing bandwhich bandwhich # bandwhich
 
         # Extra Rust tools only for desktop / laptop roles
         {{- if or (eq $role "desktop") (eq $role "laptop") }}
-        cargo_install_if_missing dog dog             # dog (DNS client)
-        cargo_install_if_missing bluetui bluetui     # Bluetui (BT TUI)
+        cargo_install_if_missing dog dog              # dog (DNS client)
+        cargo_install_if_missing bluetui bluetui      # Bluetui (BT TUI)
         {{- end }}
 
         # gdu is Go-based, not Rust, so we leave it to manual/binary install:
