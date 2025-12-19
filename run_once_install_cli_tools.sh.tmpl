@@ -106,9 +106,26 @@ install_micro_binary() {
         echo "  - Found existing micro at: $existing_micro"
         echo "    Version: $micro_version"
 
-        # Remove package if it's the broken 2.0.15-dev build
-        if [[ "$micro_version" == *"2.0.15-dev"* ]]; then
-            echo "    Detected broken 2.0.15-dev build, removing..."
+        # Skip if it's already a working version (not the broken dev build)
+        if [[ "$micro_version" != *"-dev"* ]]; then
+            echo "    ✓ micro version is good, skipping installation"
+            
+            # Quick speed test
+            local start=$(date +%s%3N)
+            timeout 5s micro --version &>/dev/null
+            local duration=$(($(date +%s%3N) - start))
+            
+            if [[ $duration -gt 3000 ]]; then
+                echo "    ⚠ Warning: micro seems slow (${duration}ms startup)"
+            else
+                echo "    ✓ micro is responsive (${duration}ms startup)"
+            fi
+            return 0
+        fi
+
+        # Remove Arch package if it's the broken dev build
+        if [[ "$micro_version" == *"-dev"* ]]; then
+            echo "    Detected broken dev build, removing..."
             
             if command -v pacman &>/dev/null && pacman -Q micro &>/dev/null; then
                 sudo pacman -R --noconfirm micro
@@ -123,9 +140,13 @@ install_micro_binary() {
         fi
     fi
 
-    echo "  - Installing/updating micro via official binary script..."
-    if curl -sL https://install.micro.mu | sudo bash; then
-        echo "    ✓ micro installed successfully"
+    echo "  - Installing micro via official installer..."
+    if curl https://getmic.ro | bash; then
+        # Move to system location
+        if [[ -f ./micro ]]; then
+            sudo mv ./micro /usr/local/bin/micro
+            sudo chmod +x /usr/local/bin/micro
+        fi
         
         # Verify installation
         if ! command -v micro &> /dev/null; then
@@ -133,10 +154,10 @@ install_micro_binary() {
             return 1
         fi
         
-        # Show version
+        echo "    ✓ micro installed successfully"
         echo "    Version: $(micro --version 2>/dev/null | head -n1)"
 
-        # Quick speed test (should be < 3 seconds)
+        # Quick speed test
         local start=$(date +%s%3N)
         timeout 5s micro --version &>/dev/null
         local duration=$(($(date +%s%3N) - start))
@@ -147,7 +168,7 @@ install_micro_binary() {
             echo "    ✓ micro is responsive (${duration}ms startup)"
         fi
     else
-        echo "    ⚠ Failed to install micro via binary script"
+        echo "    ⚠ Failed to install micro"
         return 1
     fi
 }
