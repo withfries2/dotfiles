@@ -1,0 +1,54 @@
+import { Editor } from "fresh";
+
+Editor.on("init", (editor) => {
+  // File Associations
+  editor.setFileAssociations({
+    // Standard shell files
+    ".bashrc": "bash",
+    ".bash_profile": "bash",
+    ".bash_aliases": "bash",
+    ".zshrc": "bash",
+    ".profile": "bash",
+    
+    // Chezmoi & Scripting templates
+    "*.tmpl": "bash",
+    
+    {{- /* Arch Linux specific files */ -}}
+    {{- if eq .chezmoi.os "linux" }}
+    {{- if (stat "/etc/arch-release") }}
+    "PKGBUILD": "bash",
+    "*.install": "bash",
+    {{- end }}
+    {{- end }}
+    
+    // Web & Logic
+    "*.ts": "typescript",
+    "*.tsx": "typescript",
+    "*.py": "python"
+  });
+
+  // Theme Settings
+  editor.setTheme({
+    "ui.background": "#1a1a1a",
+    "token.keyword": "#569CD6",
+    "token.string": "#CE9178",
+    "token.comment": "#6A9955"
+  });
+
+  // --- Indentation Settings ---
+  // These settings attempt to define consistent formatting rules.
+  // Note: The specific function name might be 'editor.setLspConfig'
+  // or 'editor.setEditorConfig' depending on your fresh version.
+
+  try {
+    // A common way to define core editor behavior in modern editors
+    editor.setEditorConfig({
+      insertSpaces: true,  // Use spaces instead of tabs
+      tabSize: 4,          // 4 spaces per tab stop
+      detectIndentation: true // Automatically detect existing indentation
+    });
+  } catch (e) {
+    // Fallback or ignore if the API isn't available
+    console.log("Could not apply editor config via setEditorConfig");
+  }
+});
