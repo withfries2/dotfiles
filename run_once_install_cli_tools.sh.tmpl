@@ -43,11 +43,20 @@ ensure_rust_and_cargo() {
 
     echo ""
     echo "Installing Rust toolchain (rustup + cargo)..."
-    # Non-interactive rustup install, default profile, stable toolchain
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
-    # Ensure cargo is on PATH for the rest of this script
+    # Source the cargo env for this script
     export PATH="$HOME/.cargo/bin:$PATH"
+
+    # Add to shell configs if not already present
+    for rc_file in "$HOME/.bashrc" "$HOME/.zshrc"; do
+        if [[ -f "$rc_file" ]] && ! grep -q 'cargo/env' "$rc_file"; then
+            echo "" >> "$rc_file"
+            echo '# Rust cargo path' >> "$rc_file"
+            echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> "$rc_file"
+            echo "  ✓ Added cargo to PATH in $(basename $rc_file)"
+        fi
+    done
 
     if ! command -v cargo &> /dev/null; then
         echo "❌ Failed to install cargo (Rust toolchain)"
@@ -74,22 +83,117 @@ cargo_install_if_missing() {
     fi
 }
 
-# New function: Installs the latest version of micro via the official upstream binary script.
-install_micro_binary() {
-    if command -v micro &> /dev/null; then
-        echo "  - micro already installed (via package manager or previous run)."
-        echo "    Attempting to install/update via official binary script for latest version..."
+install_fresh_editor() {
+    if command -v fresh &> /dev/null; then
+        echo "  - fresh-editor already installed, skipping"
+        return
     fi
 
-    # The official install script detects the OS and installs the correct binary.
-    # We pipe the script to bash and use sudo for system-wide installation.
-    if curl -sL https://install.micro.mu | sudo bash; then
-        echo "    ✓ micro binary installed/updated successfully"
+    echo "  - Installing fresh-editor via cargo..."
+    if cargo install fresh-editor; then
+        echo "    ✓ fresh-editor installed"
     else
-        echo "    ⚠ Failed to install/update micro via binary script."
+        echo "    ⚠ Failed to install fresh-editor"
     fi
 }
 
+# Installs the latest stable version of micro via the official upstream binary script
+install_micro_binary() {
+    local existing_micro=""
+    if command -v micro &> /dev/null; then
+        existing_micro=$(which micro)
+        local micro_version=$(micro --version 2>/dev/null | head -n1)
+        echo "  - Found existing micro at: $existing_micro"
+        echo "    Version: $micro_version"
+
+        # Remove package if it's the broken 2.0.15-dev build
+        if [[ "$micro_version" == *"2.0.15-dev"* ]]; then
+            echo "    Detected broken 2.0.15-dev build, removing..."
+            
+            if command -v pacman &>/dev/null && pacman -Q micro &>/dev/null; then
+                sudo pacman -R --noconfirm micro
+            elif command -v apt &>/dev/null && dpkg -l | grep -q "^ii.*micro"; then
+                sudo apt remove -y micro
+            elif command -v dnf &>/dev/null && rpm -q micro &>/dev/null; then
+                sudo dnf remove -y micro
+            elif [[ -f "$existing_micro" ]]; then
+                echo "    Removing $existing_micro manually..."
+                sudo rm -f "$existing_micro"
+            fi
+        fi
+    fi
+
+    echo "  - Installing/updating micro via official binary script..."
+    if curl -sL https://install.micro.mu | sudo bash; then
+        echo "    ✓ micro installed successfully"
+        
+        # Verify installation
+        if ! command -v micro &> /dev/null; then
+            echo "    ❌ micro not found in PATH after installation"
+            return 1
+        fi
+        
+        # Show version
+        echo "    Version: $(micro --version 2>/dev/null | head -n1)"
+
+        # Quick speed test (should be < 3 seconds)
+        local start=$(date +%s%3N)
+        timeout 5s micro --version &>/dev/null
+        local duration=$(($(date +%s%3N) - start))
+
+        if [[ $duration -gt 3000 ]]; then
+            echo "    ⚠ Warning: micro seems slow (${duration}ms startup)"
+        else
+            echo "    ✓ micro is responsive (${duration}ms startup)"
+        fi
+    else
+        echo "    ⚠ Failed to install micro via binary script"
+        return 1
+    fi
+}
+
+setup_truecolor_terminfo() {
+    echo ""
+    echo "Setting up truecolor terminfo support..."
+
+    # Check if xterm-direct already has RGB
+    if infocmp -x xterm-direct 2>/dev/null | grep -q "RGB"; then
+        echo "  - RGB terminfo already configured"
+        return
+    fi
+
+    # Create user terminfo directory
+    mkdir -p "$HOME/.terminfo"
+
+    # Extract and add RGB capability
+    if command -v infocmp &>/dev/null && command -v tic &>/dev/null; then
+        echo "  - Adding RGB capability to xterm-direct terminfo..."
+        infocmp xterm-direct > /tmp/xterm-direct.src 2>/dev/null || {
+            echo "    ⚠ xterm-direct not found in system terminfo"
+            return 1
+        }
+
+        # Add RGB to capabilities line (line 3)
+        sed -i '3s/am,/am, RGB,/' /tmp/xterm-direct.src
+
+        # Compile to user terminfo
+        tic -x /tmp/xterm-direct.src -o "$HOME/.terminfo"
+
+        # Add TERMINFO export to shell configs
+        for rc_file in "$HOME/.bashrc" "$HOME/.zshrc"; do
+            if [[ -f "$rc_file" ]] && ! grep -q 'TERMINFO=' "$rc_file"; then
+                echo "" >> "$rc_file"
+                echo '# User terminfo for truecolor support' >> "$rc_file"
+                echo 'export TERMINFO=~/.terminfo' >> "$rc_file"
+            fi
+        done
+
+        echo "    ✓ RGB terminfo configured"
+        rm -f /tmp/xterm-direct.src
+    else
+        echo "    ⚠ infocmp/tic not available, skipping terminfo setup"
+    fi
+}
 
 install_arch() {
     echo "📦 Installing packages for Arch Linux..."
@@ -112,7 +216,7 @@ install_arch() {
         lazygit git-delta
 
         # Text tools
-        tldr # Removed 'micro' for binary install
+        tldr # Note: 'micro' removed for binary install
 
         # Archive & media tools (for yazi previews & general use)
         p7zip ffmpeg imagemagick poppler jq
@@ -121,7 +225,7 @@ install_arch() {
         curl wget httpie
 
         # Dev tools
-        github-cli tokei hyperfine
+        github-cli tokei hyperfine pyright bash-language-server
 
         # System utilities
         rsync unzip zip
@@ -133,7 +237,7 @@ install_arch() {
     echo "Installing core packages..."
     sudo pacman -S --needed --noconfirm "${core_packages[@]}" || {
         echo "⚠ Some packages failed to install"
-        echo "Continuing with AUR packages..."
+        echo "Continuing with remaining setup..."
     }
 
     # Install micro via the official binary script
@@ -191,6 +295,10 @@ install_arch() {
         echo "  Optional: ${optional_aur[*]}"
     fi
 
+    ensure_rust_and_cargo
+    install_fresh_editor
+    setup_truecolor_terminfo
+
     echo "✓ Arch packages installed"
 }
 
@@ -199,7 +307,7 @@ install_fedora() {
 
     local packages=(
         fzf zoxide starship ripgrep fd-find bat eza dust duf procs sd
-        tree btop htop nethogs bandwhich git-delta tldr # Removed 'micro' for binary install
+        tree btop htop nethogs bandwhich git-delta tldr
         p7zip ffmpeg ImageMagick poppler-utils jq curl wget httpie
         gh tokei hyperfine rsync unzip zip glow
     )
@@ -209,6 +317,9 @@ install_fedora() {
 
     # Install micro via the official binary script
     install_micro_binary
+    
+    # Setup truecolor support
+    setup_truecolor_terminfo
 
     echo ""
     echo "Note: Some tools need manual installation on Fedora:"
@@ -238,9 +349,6 @@ install_debian() {
         # System monitoring
         btop htop nethogs
 
-        # Editors / text tools
-        # micro <-- Removed for binary install
-
         # Archive & media tools (for previews & general use)
         p7zip-full ffmpeg imagemagick poppler-utils jq
 
@@ -259,6 +367,9 @@ install_debian() {
 
     # Install micro via the official binary script
     install_micro_binary
+    
+    # Setup truecolor support
+    setup_truecolor_terminfo
 
     echo ""
     echo "Ensuring Rust + cargo are available for Rust-based CLIs..."
@@ -271,18 +382,18 @@ install_debian() {
         # Core Rust tools (all roles)
         cargo_install_if_missing du-dust dust          # dust
         cargo_install_if_missing procs procs           # procs
-        cargo_install_if_missing sd sd                # sd
-        cargo_install_if_missing yazi-fm yazi         # yazi
-        cargo_install_if_missing git-delta delta      # git delta
-        cargo_install_if_missing tokei tokei          # tokei
-        cargo_install_if_missing hyperfine hyperfine # hyperfine
-        cargo_install_if_missing bottom bottom        # bottom
-        cargo_install_if_missing bandwhich bandwhich # bandwhich
+        cargo_install_if_missing sd sd                 # sd
+        cargo_install_if_missing yazi-fm yazi          # yazi
+        cargo_install_if_missing git-delta delta       # git delta
+        cargo_install_if_missing tokei tokei           # tokei
+        cargo_install_if_missing hyperfine hyperfine   # hyperfine
+        cargo_install_if_missing bottom btm            # bottom
+        cargo_install_if_missing bandwhich bandwhich   # bandwhich
 
         # Extra Rust tools only for desktop / laptop roles
         {{- if or (eq $role "desktop") (eq $role "laptop") }}
-        cargo_install_if_missing dog dog              # dog (DNS client)
-        cargo_install_if_missing bluetui bluetui      # Bluetui (BT TUI)
+        cargo_install_if_missing dog dog               # dog (DNS client)
+        cargo_install_if_missing bluetui bluetui       # Bluetui (BT TUI)
         {{- end }}
 
         # gdu is Go-based, not Rust, so we leave it to manual/binary install:
@@ -364,8 +475,21 @@ esac
 echo ""
 echo "🎉 CLI & TUI tools installation complete!"
 echo ""
+echo "📊 Installation Summary:"
+command -v fzf &>/dev/null && echo "  ✓ fzf"
+command -v zoxide &>/dev/null && echo "  ✓ zoxide"
+command -v starship &>/dev/null && echo "  ✓ starship"
+command -v micro &>/dev/null && echo "  ✓ micro ($(micro --version 2>/dev/null | head -n1))"
+command -v yazi &>/dev/null && echo "  ✓ yazi"
+command -v lazygit &>/dev/null && echo "  ✓ lazygit"
+command -v lazydocker &>/dev/null && echo "  ✓ lazydocker"
+command -v btop &>/dev/null && echo "  ✓ btop"
+command -v bat &>/dev/null && echo "  ✓ bat"
+command -v ripgrep &>/dev/null && echo "  ✓ ripgrep"
+echo ""
 echo "Recommended next steps:"
-echo "  - Configure zoxide: Add to shell rc"
+echo "  - Restart your shell to activate new PATH entries"
 echo "  - Configure starship: starship preset nerd-font-symbols -o ~/.config/starship.toml"
 echo "  - Test yazi: yazi"
 echo "  - Test lazygit: lazygit"
+echo "  - Test micro: micro"
