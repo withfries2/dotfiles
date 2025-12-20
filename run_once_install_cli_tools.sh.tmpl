@@ -1,7 +1,35 @@
 #!/bin/bash
 {{- $role := index . "role" | default "desktop" }}
 
-# Install CLI tools and TUIs on all machines
+# =============================================================================
+# CLI & TUI Tools Installation Script
+# =============================================================================
+#
+# Description:
+#   Installs modern CLI and TUI tools across different operating systems
+#   (Arch, Fedora, Debian/Ubuntu, macOS). Prioritizes pre-built binaries
+#   over cargo/source builds for faster, more reliable installations.
+#
+# Installation Strategy:
+#   1. Native package manager packages (pacman, dnf, apt, brew)
+#   2. Official pre-built binaries from GitHub releases
+#   3. Upstream installation scripts (when available)
+#   4. Cargo builds (only as last resort for tools without binaries)
+#
+# Version History:
+# -----------------------------------------------------------------------------
+# 2025-12-20: Major refactoring to minimize cargo dependencies
+#   - Replaced most cargo installations with native packages and pre-built binaries
+#   - Arch: Added fresh-editor-bin AUR package, removed cargo fallback
+#   - Fedora: Added binary downloads for lazygit, lazydocker, yazi, gdu
+#   - Fedora: Cargo only used for dog/bluetui on desktop/laptop roles
+#   - Debian: Added binary downloads for yazi, bottom, gdu
+#   - Debian: Removed desktop-specific tools (bluetui, dog) - server-focused
+#   - Debian: Cargo only as fallback for procs, bandwhich, yazi if binaries fail
+#   - Result: Faster installs, fewer build failures, minimal Rust toolchain dependency
+#
+# =============================================================================
+
 set -euo pipefail
 
 # Handle sudo when running as root
@@ -80,20 +108,6 @@ cargo_install_if_missing() {
         echo "    ✓ $bin_name installed"
     else
         echo "    ⚠ Failed to install $bin_name"
-    fi
-}
-
-install_fresh_editor() {
-    if command -v fresh &> /dev/null; then
-        echo "  - fresh-editor already installed, skipping"
-        return
-    fi
-
-    echo "  - Installing fresh-editor via cargo..."
-    if cargo install fresh-editor; then
-        echo "    ✓ fresh-editor installed"
-    else
-        echo "    ⚠ Failed to install fresh-editor"
     fi
 }
 
@@ -268,6 +282,7 @@ install_arch() {
     local aur_packages=(
         lazydocker
         bluetui
+        fresh-editor-bin  # Pre-built binary, avoids cargo build issues
     )
 
     # Optional AUR packages (may have dependency issues)
@@ -316,8 +331,9 @@ install_arch() {
         echo "  Optional: ${optional_aur[*]}"
     fi
 
-    ensure_rust_and_cargo
-    install_fresh_editor
+    # fresh-editor is now installed via AUR (fresh-editor-bin) above
+    # No cargo installation needed - the pre-built binary avoids build failures
+
     setup_truecolor_terminfo
 
     echo "✓ Arch packages installed"
@@ -327,8 +343,9 @@ install_fedora() {
     echo "📦 Installing packages for Fedora..."
 
     local packages=(
+        # Core tools available in Fedora repos
         fzf zoxide starship ripgrep fd-find bat eza dust duf procs sd
-        tree btop htop nethogs bandwhich git-delta tldr
+        tree btop htop nethogs bandwhich git-delta tldr bottom
         p7zip ffmpeg ImageMagick poppler-utils jq curl wget httpie
         gh tokei hyperfine rsync unzip zip glow
     )
@@ -338,19 +355,101 @@ install_fedora() {
 
     # Install micro via the official binary script
     install_micro_binary
-    
+
     # Setup truecolor support
     setup_truecolor_terminfo
 
     echo ""
-    echo "Note: Some tools need manual installation on Fedora:"
-    echo "  - lazygit: https://github.com/jesseduffield/lazygit"
-    echo "  - lazydocker: https://github.com/jesseduffield/lazydocker"
-    echo "  - yazi: cargo install --locked yazi-fm"
-    echo "  - bluetui: cargo install bluetui"
-    echo "  - bottom: cargo install bottom"
-    echo "  - dog: cargo install dog"
-    echo "  - gdu: https://github.com/dundee/gdu/releases"
+    echo "Installing additional tools via direct binary downloads..."
+
+    # Install lazygit via binary
+    if ! command -v lazygit &> /dev/null; then
+        echo "  - Installing lazygit via official binary..."
+        local lazygit_version="0.45.1"
+        local lazygit_url="https://github.com/jesseduffield/lazygit/releases/download/v${lazygit_version}/lazygit_${lazygit_version}_Linux_x86_64.tar.gz"
+        if curl -fsSL "$lazygit_url" -o /tmp/lazygit.tar.gz && \
+           tar -xzf /tmp/lazygit.tar.gz -C /tmp/ lazygit && \
+           sudo mv /tmp/lazygit /usr/local/bin/ && \
+           sudo chmod +x /usr/local/bin/lazygit; then
+            echo "    ✓ lazygit installed"
+            rm -f /tmp/lazygit.tar.gz
+        else
+            echo "    ⚠ Failed to install lazygit"
+        fi
+    fi
+
+    # Install lazydocker via official script
+    if ! command -v lazydocker &> /dev/null; then
+        echo "  - Installing lazydocker via upstream script..."
+        if DIR="/usr/local/bin" \
+          curl -fsSL https://raw.githubusercontent.com/jesseduffield/lazydocker/master/scripts/install_update_linux.sh \
+          | bash; then
+            echo "    ✓ lazydocker installed"
+        else
+            echo "    ⚠ Failed to install lazydocker"
+        fi
+    fi
+
+    # Install yazi via binary
+    if ! command -v yazi &> /dev/null; then
+        echo "  - Installing yazi via official binary..."
+        local yazi_version="0.4.2"
+        local yazi_url="https://github.com/sxyazi/yazi/releases/download/v${yazi_version}/yazi-x86_64-unknown-linux-gnu.zip"
+        if curl -fsSL "$yazi_url" -o /tmp/yazi.zip && \
+           unzip -q /tmp/yazi.zip -d /tmp/ && \
+           sudo mv /tmp/yazi-x86_64-unknown-linux-gnu/yazi /usr/local/bin/ && \
+           sudo chmod +x /usr/local/bin/yazi; then
+            echo "    ✓ yazi installed"
+            rm -rf /tmp/yazi.zip /tmp/yazi-x86_64-unknown-linux-gnu
+        else
+            echo "    ⚠ Failed to install yazi"
+        fi
+    fi
+
+    # Install gdu via binary
+    if ! command -v gdu &> /dev/null; then
+        echo "  - Installing gdu via official binary..."
+        local gdu_version="5.29.0"
+        local gdu_url="https://github.com/dundee/gdu/releases/download/v${gdu_version}/gdu_linux_amd64.tgz"
+        if curl -fsSL "$gdu_url" -o /tmp/gdu.tgz && \
+           tar -xzf /tmp/gdu.tgz -C /tmp/ && \
+           sudo mv /tmp/gdu_linux_amd64 /usr/local/bin/gdu && \
+           sudo chmod +x /usr/local/bin/gdu; then
+            echo "    ✓ gdu installed"
+            rm -f /tmp/gdu.tgz
+        else
+            echo "    ⚠ Failed to install gdu"
+        fi
+    fi
+
+    # Only install cargo for remaining tools if needed
+    local need_cargo=false
+    {{- if or (eq $role "desktop") (eq $role "laptop") }}
+    if ! command -v dog &> /dev/null; then
+        need_cargo=true
+    fi
+    if ! command -v bluetui &> /dev/null; then
+        need_cargo=true
+    fi
+    {{- end }}
+
+    if [ "$need_cargo" = true ]; then
+        echo ""
+        echo "Installing remaining tools via cargo (desktop/laptop only)..."
+        if ensure_rust_and_cargo; then
+            export PATH="$HOME/.cargo/bin:$PATH"
+
+            {{- if or (eq $role "desktop") (eq $role "laptop") }}
+            cargo_install_if_missing dog dog
+            cargo_install_if_missing bluetui bluetui
+            {{- end }}
+        else
+            echo "⚠ Skipping cargo-based tools (Rust toolchain not available)"
+        fi
+    else
+        echo ""
+        echo "✓ All tools installed via native packages/binaries - no cargo needed!"
+    fi
 
     echo "✓ Fedora packages installed"
 }
@@ -364,11 +463,17 @@ install_debian() {
         # Shell / navigation
         fzf zoxide
 
-        # Modern CLI replacements
+        # Modern CLI replacements (pre-built binaries where available)
         ripgrep fd-find bat tree ncdu eza
+
+        # Tools available as native packages in recent Debian/Ubuntu
+        dust     # du-dust replacement
+        # procs  # Not widely available in stable repos yet
+        sd       # sed alternative
 
         # System monitoring
         btop htop nethogs
+        # bandwhich  # Not in stable repos yet
 
         # Archive & media tools (for previews & general use)
         p7zip-full ffmpeg imagemagick poppler-utils jq
@@ -377,50 +482,112 @@ install_debian() {
         curl wget httpie
 
         # Git / VCS helpers
-        lazygit
+        lazygit git-delta  # delta now available in newer repos
+
+        # Dev tools
+        tokei hyperfine    # Both available in newer Debian/Ubuntu
 
         # System utilities
         rsync unzip zip
     )
 
     echo "Installing packages via apt..."
-    sudo apt install -y "${packages[@]}"
+    sudo apt install -y "${packages[@]}" 2>&1 | grep -v "Unable to locate package" || true
 
     # Install micro via the official binary script
     install_micro_binary
-    
+
     # Setup truecolor support
     setup_truecolor_terminfo
 
     echo ""
-    echo "Ensuring Rust + cargo are available for Rust-based CLIs..."
-    if ensure_rust_and_cargo; then
+    echo "Installing tools via direct binary downloads..."
+
+    # Install yazi via binary (faster than cargo build)
+    if ! command -v yazi &> /dev/null; then
+        echo "  - Installing yazi via official binary..."
+        local yazi_version="0.4.2"
+        local yazi_url="https://github.com/sxyazi/yazi/releases/download/v${yazi_version}/yazi-x86_64-unknown-linux-gnu.zip"
+        if curl -fsSL "$yazi_url" -o /tmp/yazi.zip && \
+           unzip -q /tmp/yazi.zip -d /tmp/ && \
+           sudo mv /tmp/yazi-x86_64-unknown-linux-gnu/yazi /usr/local/bin/ && \
+           sudo chmod +x /usr/local/bin/yazi; then
+            echo "    ✓ yazi installed"
+            rm -rf /tmp/yazi.zip /tmp/yazi-x86_64-unknown-linux-gnu
+        else
+            echo "    ⚠ Failed to install yazi, will try cargo fallback"
+        fi
+    fi
+
+    # Install bottom via binary
+    if ! command -v btm &> /dev/null; then
+        echo "  - Installing bottom via official binary..."
+        local bottom_version="0.10.2"
+        local bottom_url="https://github.com/ClementTsang/bottom/releases/download/${bottom_version}/bottom_x86_64-unknown-linux-gnu.tar.gz"
+        if curl -fsSL "$bottom_url" -o /tmp/bottom.tar.gz && \
+           tar -xzf /tmp/bottom.tar.gz -C /tmp/ && \
+           sudo mv /tmp/btm /usr/local/bin/ && \
+           sudo chmod +x /usr/local/bin/btm; then
+            echo "    ✓ bottom installed"
+            rm -f /tmp/bottom.tar.gz
+        else
+            echo "    ⚠ Failed to install bottom"
+        fi
+    fi
+
+    # Install gdu via binary (Go-based)
+    if ! command -v gdu &> /dev/null; then
+        echo "  - Installing gdu via official binary..."
+        local gdu_version="5.29.0"
+        local gdu_url="https://github.com/dundee/gdu/releases/download/v${gdu_version}/gdu_linux_amd64.tgz"
+        if curl -fsSL "$gdu_url" -o /tmp/gdu.tgz && \
+           tar -xzf /tmp/gdu.tgz -C /tmp/ && \
+           sudo mv /tmp/gdu_linux_amd64 /usr/local/bin/gdu && \
+           sudo chmod +x /usr/local/bin/gdu; then
+            echo "    ✓ gdu installed"
+            rm -f /tmp/gdu.tgz
+        else
+            echo "    ⚠ Failed to install gdu"
+        fi
+    fi
+
+    # Only install Rust for server-critical tools that truly need it
+    # (Debian is primarily used for servers, so skip GUI tools like bluetui)
+    local need_cargo=false
+    local cargo_tools=()
+
+    # Check for tools that failed to install via native packages
+    if ! command -v procs &> /dev/null; then
+        cargo_tools+=("procs:procs")
+        need_cargo=true
+    fi
+    if ! command -v bandwhich &> /dev/null; then
+        cargo_tools+=("bandwhich:bandwhich")
+        need_cargo=true
+    fi
+    if ! command -v yazi &> /dev/null; then
+        cargo_tools+=("yazi-fm:yazi")
+        need_cargo=true
+    fi
+
+    # Note: Skipping bluetui and other GUI tools on Debian (server-focused)
+
+    if [ "$need_cargo" = true ]; then
         echo ""
-        echo "Installing Rust-based CLIs via cargo..."
-        # Ensure cargo is on PATH in case rustup just ran
-        export PATH="$HOME/.cargo/bin:$PATH"
+        echo "Installing remaining tools via cargo (only what's needed)..."
+        if ensure_rust_and_cargo; then
+            export PATH="$HOME/.cargo/bin:$PATH"
 
-        # Core Rust tools (all roles)
-        cargo_install_if_missing du-dust dust          # dust
-        cargo_install_if_missing procs procs           # procs
-        cargo_install_if_missing sd sd                 # sd
-        cargo_install_if_missing yazi-fm yazi          # yazi
-        cargo_install_if_missing git-delta delta       # git delta
-        cargo_install_if_missing tokei tokei           # tokei
-        cargo_install_if_missing hyperfine hyperfine   # hyperfine
-        cargo_install_if_missing bottom btm            # bottom
-        cargo_install_if_missing bandwhich bandwhich   # bandwhich
-
-        # Extra Rust tools only for desktop / laptop roles
-        {{- if or (eq $role "desktop") (eq $role "laptop") }}
-        cargo_install_if_missing dog dog               # dog (DNS client)
-        cargo_install_if_missing bluetui bluetui       # Bluetui (BT TUI)
-        {{- end }}
-
-        # gdu is Go-based, not Rust, so we leave it to manual/binary install:
-        echo "  - gdu: install from https://github.com/dundee/gdu/releases if desired"
+            for tool in "${cargo_tools[@]}"; do
+                IFS=':' read -r crate bin_name <<< "$tool"
+                cargo_install_if_missing "$crate" "$bin_name"
+            done
+        else
+            echo "⚠ Skipping cargo-based tools (Rust toolchain not available)"
+        fi
     else
-        echo "⚠ Skipping cargo-based tools (Rust toolchain not available)"
+        echo ""
+        echo "✓ All tools installed via native packages/binaries - no cargo needed!"
     fi
 
     # Install lazydocker via official script on Debian/Ubuntu

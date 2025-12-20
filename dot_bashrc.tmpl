@@ -37,8 +37,6 @@ alias lg='lazygit'
 alias ld='lazydocker'
 
 # Debian-specific: Use better alternatives
-alias cat='batcat'
-alias bat='batcat'
 alias fd='fdfind'
 # Quick navigation
 alias cdd='builtin cd /docker'
@@ -66,6 +64,16 @@ export TERMINFO="$HOME/.terminfo"  # Use user terminfo with RGB capability for t
 # --------------------------------
 # CLI / TUI aliases (always available)
 # --------------------------------
+# Bat (better cat) aliases
+{{- if eq (index .chezmoi "osRelease").id "debian" }}
+alias cat='batcat -pP'  # Plain output, no paging
+alias catp='batcat -P'  # No paging, keep other features
+alias bat='batcat'      # Debian packages it as batcat
+{{- else }}
+alias cat='bat -pP'     # Plain output, no paging
+alias catp='bat -P'     # No paging, keep other features
+{{- end }}
+
 alias m='micro'
 alias px='ssh root@192.168.1.10'
 alias sp='ssh root@192.168.1.10'
