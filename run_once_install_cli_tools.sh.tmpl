@@ -188,32 +188,42 @@ install_micro_binary() {
 }
 
 setup_truecolor_terminfo() {
+    # Skip on WSL - Windows Terminal supports truecolor natively
+    if grep -qi microsoft /proc/version 2>/dev/null; then
+        echo "  - Skipping terminfo setup (WSL detected - Windows Terminal supports truecolor natively)"
+        return 0
+    fi
+    
     echo ""
     echo "Setting up truecolor terminfo support..."
-
+    
     # Check if xterm-direct already has RGB
     if infocmp -x xterm-direct 2>/dev/null | grep -q "RGB"; then
         echo "  - RGB terminfo already configured"
-        return
+        return 0
     fi
-
+    
     # Create user terminfo directory
     mkdir -p "$HOME/.terminfo"
-
+    
     # Extract and add RGB capability
     if command -v infocmp &>/dev/null && command -v tic &>/dev/null; then
         echo "  - Adding RGB capability to xterm-direct terminfo..."
         infocmp xterm-direct > /tmp/xterm-direct.src 2>/dev/null || {
-            echo "    ⚠ xterm-direct not found in system terminfo"
-            return 1
+            echo "    ⚠ xterm-direct not found in system terminfo (non-fatal)"
+            return 0
         }
-
+        
         # Add RGB to capabilities line (line 3)
         sed -i '3s/am,/am, RGB,/' /tmp/xterm-direct.src
-
+        
         # Compile to user terminfo
-        tic -x /tmp/xterm-direct.src -o "$HOME/.terminfo"
-
+        tic -x /tmp/xterm-direct.src -o "$HOME/.terminfo" 2>/dev/null || {
+            echo "    ⚠ Failed to compile terminfo (non-fatal)"
+            rm -f /tmp/xterm-direct.src
+            return 0
+        }
+        
         # Add TERMINFO export to shell configs
         for rc_file in "$HOME/.bashrc" "$HOME/.zshrc"; do
             if [[ -f "$rc_file" ]] && ! grep -q 'TERMINFO=' "$rc_file"; then
@@ -222,11 +232,12 @@ setup_truecolor_terminfo() {
                 echo 'export TERMINFO=~/.terminfo' >> "$rc_file"
             fi
         done
-
+        
         echo "    ✓ RGB terminfo configured"
         rm -f /tmp/xterm-direct.src
     else
-        echo "    ⚠ infocmp/tic not available, skipping terminfo setup"
+        echo "    ⚠ infocmp/tic not available, skipping terminfo setup (non-fatal)"
+        return 0
     fi
 }
 
@@ -455,163 +466,176 @@ install_fedora() {
 }
 
 install_debian() {
-    echo "📦 Installing packages for Debian/Ubuntu/ChromeOS Linux..."
+    echo "📦 Installing packages for Debian/Ubuntu..."
 
     sudo apt update
 
-    local packages=(
-        # Shell / navigation
-        fzf zoxide
+    # Detect Ubuntu version
+    UBUNTU_VERSION=$(lsb_release -rs 2>/dev/null || echo "unknown")
+    echo "Detected Ubuntu version: $UBUNTU_VERSION"
 
-        # Modern CLI replacements (pre-built binaries where available)
-        ripgrep fd-find bat tree ncdu eza
-
-        # Tools available as native packages in recent Debian/Ubuntu
-        dust     # du-dust replacement
-        # procs  # Not widely available in stable repos yet
-        sd       # sed alternative
-
-        # System monitoring
-        btop htop nethogs
-        # bandwhich  # Not in stable repos yet
-
-        # Archive & media tools (for previews & general use)
-        p7zip-full ffmpeg imagemagick poppler-utils jq
-
-        # Network / HTTP tools
-        curl wget httpie
-
-        # Git / VCS helpers
-        lazygit git-delta  # delta now available in newer repos
-
-        # Dev tools
-        tokei hyperfine    # Both available in newer Debian/Ubuntu
-
-        # System utilities
-        rsync unzip zip
-    )
+    if [[ "$UBUNTU_VERSION" == "24.04" ]]; then
+        echo "✓ Ubuntu 24.04 detected - using optimized package list"
+        
+        # Ubuntu 24.04 Noble - many modern tools now in repos!
+        local packages=(
+            # Shell enhancements (now in repos!)
+            fzf zoxide
+            
+            # Modern CLI replacements (now in repos!)
+            ripgrep fd-find bat tree eza git-delta gdu
+            
+            # System monitoring
+            btop htop nethogs
+            
+            # Archive & media tools
+            p7zip-full ffmpeg imagemagick poppler-utils jq
+            
+            # Network tools
+            curl wget httpie
+            
+            # Dev tools
+            hyperfine
+            
+            # System utilities
+            rsync unzip zip
+            
+            # Documentation
+            tldr
+        )
+    else
+        echo "✓ Ubuntu $UBUNTU_VERSION or Debian - using fallback package list"
+        
+        local packages=(
+            fzf ripgrep fd-find bat tree ncdu
+            btop htop nethogs
+            p7zip-full ffmpeg imagemagick poppler-utils jq
+            curl wget httpie rsync unzip zip
+        )
+    fi
 
     echo "Installing packages via apt..."
-    sudo apt install -y "${packages[@]}" 2>&1 | grep -v "Unable to locate package" || true
+    sudo apt install -y "${packages[@]}"
 
-    # Install micro via the official binary script
     install_micro_binary
-
-    # Setup truecolor support
     setup_truecolor_terminfo
 
     echo ""
-    echo "Installing tools via direct binary downloads..."
-
-    # Install yazi via binary (faster than cargo build)
-    if ! command -v yazi &> /dev/null; then
-        echo "  - Installing yazi via official binary..."
-        local yazi_version="0.4.2"
-        local yazi_url="https://github.com/sxyazi/yazi/releases/download/v${yazi_version}/yazi-x86_64-unknown-linux-gnu.zip"
-        if curl -fsSL "$yazi_url" -o /tmp/yazi.zip && \
-           unzip -q /tmp/yazi.zip -d /tmp/ && \
-           sudo mv /tmp/yazi-x86_64-unknown-linux-gnu/yazi /usr/local/bin/ && \
-           sudo chmod +x /usr/local/bin/yazi; then
-            echo "    ✓ yazi installed"
-            rm -rf /tmp/yazi.zip /tmp/yazi-x86_64-unknown-linux-gnu
-        else
-            echo "    ⚠ Failed to install yazi, will try cargo fallback"
-        fi
+    echo "📦 Installing GitHub CLI via official repo..."
+    
+    if ! command -v gh &>/dev/null; then
+        echo "Installing GitHub CLI..."
+        (type -p wget >/dev/null || sudo apt install wget -y) \
+        && sudo mkdir -p -m 755 /etc/apt/keyrings \
+        && wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
+        && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+        && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+        && sudo apt update \
+        && sudo apt install gh -y
     fi
 
-    # Install bottom via binary
-    if ! command -v btm &> /dev/null; then
-        echo "  - Installing bottom via official binary..."
-        local bottom_version="0.10.2"
-        local bottom_url="https://github.com/ClementTsang/bottom/releases/download/${bottom_version}/bottom_x86_64-unknown-linux-gnu.tar.gz"
-        if curl -fsSL "$bottom_url" -o /tmp/bottom.tar.gz && \
-           tar -xzf /tmp/bottom.tar.gz -C /tmp/ && \
-           sudo mv /tmp/btm /usr/local/bin/ && \
-           sudo chmod +x /usr/local/bin/btm; then
-            echo "    ✓ bottom installed"
-            rm -f /tmp/bottom.tar.gz
-        else
-            echo "    ⚠ Failed to install bottom"
-        fi
-    fi
+    echo ""
+    echo "📦 Installing tools via official scripts..."
 
-    # Install gdu via binary (Go-based)
-    if ! command -v gdu &> /dev/null; then
-        echo "  - Installing gdu via official binary..."
-        local gdu_version="5.29.0"
-        local gdu_url="https://github.com/dundee/gdu/releases/download/v${gdu_version}/gdu_linux_amd64.tgz"
-        if curl -fsSL "$gdu_url" -o /tmp/gdu.tgz && \
-           tar -xzf /tmp/gdu.tgz -C /tmp/ && \
-           sudo mv /tmp/gdu_linux_amd64 /usr/local/bin/gdu && \
-           sudo chmod +x /usr/local/bin/gdu; then
-            echo "    ✓ gdu installed"
-            rm -f /tmp/gdu.tgz
-        else
-            echo "    ⚠ Failed to install gdu"
-        fi
-    fi
-
-    # Only install Rust for server-critical tools that truly need it
-    # (Debian is primarily used for servers, so skip GUI tools like bluetui)
-    local need_cargo=false
-    local cargo_tools=()
-
-    # Check for tools that failed to install via native packages
-    if ! command -v procs &> /dev/null; then
-        cargo_tools+=("procs:procs")
-        need_cargo=true
-    fi
-    if ! command -v bandwhich &> /dev/null; then
-        cargo_tools+=("bandwhich:bandwhich")
-        need_cargo=true
-    fi
-    if ! command -v yazi &> /dev/null; then
-        cargo_tools+=("yazi-fm:yazi")
-        need_cargo=true
-    fi
-
-    # Note: Skipping bluetui and other GUI tools on Debian (server-focused)
-
-    if [ "$need_cargo" = true ]; then
-        echo ""
-        echo "Installing remaining tools via cargo (only what's needed)..."
-        if ensure_rust_and_cargo; then
-            export PATH="$HOME/.cargo/bin:$PATH"
-
-            for tool in "${cargo_tools[@]}"; do
-                IFS=':' read -r crate bin_name <<< "$tool"
-                cargo_install_if_missing "$crate" "$bin_name"
-            done
-        else
-            echo "⚠ Skipping cargo-based tools (Rust toolchain not available)"
-        fi
-    else
-        echo ""
-        echo "✓ All tools installed via native packages/binaries - no cargo needed!"
-    fi
-
-    # Install lazydocker via official script on Debian/Ubuntu
-    if ! command -v lazydocker &> /dev/null; then
-        echo ""
-        echo "Installing lazydocker via upstream script..."
-        if DIR="/usr/local/bin" \
-          curl -fsSL https://raw.githubusercontent.com/jesseduffield/lazydocker/master/scripts/install_update_linux.sh \
-          | bash; then
-            echo "  ✓ lazydocker installed"
-        else
-            echo "  ⚠ Failed to install lazydocker via script"
-        fi
-    else
-        echo "  - lazydocker already installed, skipping"
-    fi
-
-    if ! command -v starship &> /dev/null; then
-        echo ""
-        echo "Installing starship prompt..."
+    if ! command -v starship &>/dev/null; then
+        echo "Installing starship..."
         curl -sS https://starship.rs/install.sh | sh -s -- -y
     fi
 
-    echo "✓ Debian packages installed"
+    if ! command -v lazydocker &>/dev/null; then
+        echo "Installing lazydocker..."
+        curl -sSL https://raw.githubusercontent.com/jesseduffield/lazydocker/master/scripts/install_update_linux.sh | bash
+    fi
+
+    echo ""
+    echo "📦 Installing tools via binary releases..."
+
+    if ! command -v lazygit &>/dev/null; then
+        echo "Installing lazygit..."
+        LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
+        curl -Lo /tmp/lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
+        sudo tar xf /tmp/lazygit.tar.gz -C /usr/local/bin lazygit
+        rm /tmp/lazygit.tar.gz
+    fi
+
+    if ! command -v yazi &>/dev/null; then
+        echo "Installing yazi..."
+        curl -fsSL "https://github.com/sxyazi/yazi/releases/download/v0.4.2/yazi-x86_64-unknown-linux-gnu.zip" -o /tmp/yazi.zip
+        unzip -q /tmp/yazi.zip -d /tmp/
+        sudo mv /tmp/yazi-x86_64-unknown-linux-gnu/yazi /usr/local/bin/
+        sudo chmod +x /usr/local/bin/yazi
+        rm -rf /tmp/yazi.zip /tmp/yazi-x86_64-unknown-linux-gnu
+    fi
+
+    if ! command -v btm &>/dev/null; then
+        echo "Installing bottom..."
+        wget -q "https://github.com/ClementTsang/bottom/releases/download/0.10.2/bottom_0.10.2-1_amd64.deb" -O /tmp/bottom.deb
+        sudo dpkg -i /tmp/bottom.deb
+        rm /tmp/bottom.deb
+    fi
+
+    if ! command -v dust &>/dev/null; then
+        echo "Installing dust..."
+        wget -q "https://github.com/bootandy/dust/releases/download/v1.1.1/dust-v1.1.1-x86_64-unknown-linux-gnu.tar.gz" -O /tmp/dust.tar.gz
+        tar -xzf /tmp/dust.tar.gz -C /tmp/
+        sudo mv /tmp/dust-v1.1.1-x86_64-unknown-linux-gnu/dust /usr/local/bin/
+        sudo chmod +x /usr/local/bin/dust
+        rm -rf /tmp/dust.tar.gz /tmp/dust-v1.1.1-x86_64-unknown-linux-gnu
+    fi
+
+    if ! command -v procs &>/dev/null; then
+        echo "Installing procs..."
+        wget -q "https://github.com/dalance/procs/releases/download/v0.14.8/procs-v0.14.8-x86_64-linux.zip" -O /tmp/procs.zip
+        unzip -q /tmp/procs.zip -d /tmp/
+        sudo mv /tmp/procs /usr/local/bin/
+        sudo chmod +x /usr/local/bin/procs
+        rm /tmp/procs.zip
+    fi
+
+    if ! command -v sd &>/dev/null; then
+        echo "Installing sd..."
+        wget -q "https://github.com/chmln/sd/releases/download/v1.0.0/sd-v1.0.0-x86_64-unknown-linux-gnu.tar.gz" -O /tmp/sd.tar.gz
+        tar -xzf /tmp/sd.tar.gz -C /tmp/
+        sudo mv /tmp/sd-v1.0.0-x86_64-unknown-linux-gnu/sd /usr/local/bin/
+        sudo chmod +x /usr/local/bin/sd
+        rm -rf /tmp/sd.tar.gz /tmp/sd-v1.0.0-x86_64-unknown-linux-gnu
+    fi
+
+    if ! command -v tokei &>/dev/null; then
+        echo "Installing tokei..."
+        wget -q "https://github.com/XAMPPRocky/tokei/releases/download/v12.1.2/tokei-x86_64-unknown-linux-gnu.tar.gz" -O /tmp/tokei.tar.gz
+        tar -xzf /tmp/tokei.tar.gz -C /tmp/
+        sudo mv /tmp/tokei /usr/local/bin/
+        sudo chmod +x /usr/local/bin/tokei
+        rm /tmp/tokei.tar.gz
+    fi
+
+    if ! command -v duf &>/dev/null; then
+        echo "Installing duf..."
+        wget -q "https://github.com/muesli/duf/releases/download/v0.8.1/duf_0.8.1_linux_amd64.deb" -O /tmp/duf.deb
+        sudo dpkg -i /tmp/duf.deb
+        rm /tmp/duf.deb
+    fi
+
+    if ! command -v bandwhich &>/dev/null; then
+        echo "Installing bandwhich..."
+        wget -q "https://github.com/imsnif/bandwhich/releases/download/v0.23.1/bandwhich-v0.23.1-x86_64-unknown-linux-musl.tar.gz" -O /tmp/bandwhich.tar.gz
+        tar -xzf /tmp/bandwhich.tar.gz -C /tmp/
+        sudo mv /tmp/bandwhich /usr/local/bin/
+        sudo chmod +x /usr/local/bin/bandwhich
+        rm /tmp/bandwhich.tar.gz
+    fi
+
+	# fastfetch
+    if ! command -v fastfetch &>/dev/null; then
+        echo "Installing fastfetch..."
+        FASTFETCH_VERSION=$(curl -s "https://api.github.com/repos/fastfetch-cli/fastfetch/releases/latest" | grep -Po '"tag_name": "\K[^"]*')
+        wget -q "https://github.com/fastfetch-cli/fastfetch/releases/download/${FASTFETCH_VERSION}/fastfetch-linux-amd64.deb" -O /tmp/fastfetch.deb
+        sudo dpkg -i /tmp/fastfetch.deb
+        rm /tmp/fastfetch.deb
+    fi
+
+    echo "✓ Debian/Ubuntu packages installed"
 }
 
 install_macos() {
@@ -664,16 +688,62 @@ echo ""
 echo "🎉 CLI & TUI tools installation complete!"
 echo ""
 echo "📊 Installation Summary:"
-command -v fzf &>/dev/null && echo "  ✓ fzf"
-command -v zoxide &>/dev/null && echo "  ✓ zoxide"
-command -v starship &>/dev/null && echo "  ✓ starship"
-command -v micro &>/dev/null && echo "  ✓ micro ($(micro --version 2>/dev/null | head -n1))"
-command -v yazi &>/dev/null && echo "  ✓ yazi"
-command -v lazygit &>/dev/null && echo "  ✓ lazygit"
-command -v lazydocker &>/dev/null && echo "  ✓ lazydocker"
-command -v btop &>/dev/null && echo "  ✓ btop"
-command -v bat &>/dev/null && echo "  ✓ bat"
-command -v ripgrep &>/dev/null && echo "  ✓ ripgrep"
+ # Comprehensive tool verification with versions and paths
+    verify_tool() {
+        local tool=$1
+        local display_name=${2:-$tool}
+        if command -v $tool &>/dev/null; then
+            local path=$(command -v $tool)
+            local version=""
+            case $tool in
+                fzf) version=$($tool --version 2>/dev/null | head -1) ;;
+                zoxide) version=$($tool --version 2>/dev/null) ;;
+                starship) version=$($tool --version 2>/dev/null | cut -d' ' -f2) ;;
+                micro) version=$($tool --version 2>/dev/null | grep -oP 'Version: \K.*') ;;
+                yazi) version=$($tool --version 2>/dev/null | head -1) ;;
+                lazygit) version=$($tool --version 2>/dev/null | grep -oP 'version=\K[^,]+') ;;
+                lazydocker) version=$($tool --version 2>/dev/null) ;;
+                btop|btm) version=$($tool --version 2>/dev/null | head -1) ;;
+                bat|batcat) version=$($tool --version 2>/dev/null | head -1) ;;
+                rg) version=$($tool --version 2>/dev/null | head -1) ;;
+                eza) version=$($tool --version 2>/dev/null | head -1) ;;
+                delta) version=$($tool --version 2>/dev/null | head -1) ;;
+                dust) version=$($tool --version 2>/dev/null) ;;
+                gdu) version=$($tool --version 2>/dev/null) ;;
+                gh) version=$($tool --version 2>/dev/null | head -1) ;;
+                procs) version=$($tool --version 2>/dev/null) ;;
+                sd) version=$($tool --version 2>/dev/null) ;;
+                tokei) version=$($tool --version 2>/dev/null | head -1) ;;
+                duf) version=$($tool --version 2>/dev/null | head -1) ;;
+                bandwhich) version=$($tool --version 2>/dev/null) ;;
+            esac
+            echo "  ✓ $display_name - v$version ($path)"
+        else
+            echo "  ✗ $display_name - NOT FOUND"
+        fi
+    }
+    
+    verify_tool fzf "fzf"
+    verify_tool zoxide "zoxide"
+    verify_tool starship "starship"
+    verify_tool micro "micro"
+    verify_tool yazi "yazi"
+    verify_tool lazygit "lazygit"
+    verify_tool lazydocker "lazydocker"
+    verify_tool btop "btop"
+    verify_tool btm "bottom"
+    verify_tool bat "bat"
+    verify_tool rg "ripgrep"
+    verify_tool eza "eza"
+    verify_tool delta "git-delta"
+    verify_tool dust "dust"
+    verify_tool gdu "gdu"
+    verify_tool gh "GitHub CLI"
+    verify_tool procs "procs"
+    verify_tool sd "sd"
+    verify_tool tokei "tokei"
+    verify_tool duf "duf"
+    verify_tool bandwhich "bandwhich"
 echo ""
 echo "Recommended next steps:"
 echo "  - Restart your shell to activate new PATH entries"
