@@ -1,0 +1,16 @@
+#!/bin/bash
+{{ if eq .chezmoi.os "linux" -}}
+{{ if (.chezmoi.kernel.osrelease | lower | contains "microsoft") -}}
+# WSL detected - sync Windows Terminal config
+WINDOWS_USER="withf"
+WINDOWS_CONFIG="/mnt/c/Users/${WINDOWS_USER}/AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json"
+
+if [ -f ~/.config/windows-terminal/settings.json ]; then
+    echo "Syncing Windows Terminal config to Windows..."
+    cp ~/.config/windows-terminal/settings.json "$WINDOWS_CONFIG"
+    echo "✓ Windows Terminal config synced"
+else
+    echo "⚠ Windows Terminal config not found in chezmoi"
+fi
+{{ end -}}
+{{ end -}}
