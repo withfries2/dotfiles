@@ -30,6 +30,13 @@ input {
     clickfinger_behavior = true
   }
 }
+
+# Enable natural scrolling for all mice
+device {
+  name = mouse
+  natural_scroll = true
+}
+
 # Scroll faster in the terminal
-windowrule = scrolltouchpad 1.5, tag:terminal
+# windowrule = scrolltouchpad 1.5, tag:terminal
 {{- end }}
