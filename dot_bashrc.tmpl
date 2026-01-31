@@ -36,8 +36,15 @@ alias lta='lt -a'
 alias lg='lazygit'
 alias ld='lazydocker'
 
-# Debian-specific: Use better alternatives
+# Debian/Ubuntu-specific: Use better alternatives and maintenance
+{{- if or (eq .chezmoi.osRelease.id "ubuntu") (eq .chezmoi.osRelease.id "debian") }}
+alias cat='batcat -pp --color=always'
+alias bat='batcat -pp --color=always'
 alias fd='fdfind'
+# Maintenance: Clean apt, logs, and docker images in one go
+alias maintain='sudo apt update && sudo apt upgrade -y && sudo apt autoremove -y && sudo apt clean && sudo journalctl --vacuum-time=7d && docker image prune -f'
+{{- end }}
+
 # Quick navigation
 alias cdd='builtin cd /docker'
 
@@ -46,11 +53,12 @@ if command -v starship >/dev/null 2>&1; then
   eval "$(starship init bash)"
 fi
 {{- end }}
+
 # --------------------------------
 # Shared environment for all roles
 # --------------------------------
 export GNOME_KEYRING_CONTROL="/run/user/$UID/keyring"
-
+export TERMINFO="$HOME/.terminfo"
 
 # --------------------
 # Default applications
@@ -58,27 +66,13 @@ export GNOME_KEYRING_CONTROL="/run/user/$UID/keyring"
 export EDITOR="micro"
 export VISUAL="code"
 
-# Terminal configuration
-export TERMINFO="$HOME/.terminfo"  # Use user terminfo with RGB capability for truecolor
-
 # --------------------------------
 # CLI / TUI aliases (always available)
 # --------------------------------
-# Bat (better cat) aliases
-{{- if eq (index .chezmoi "osRelease").id "debian" }}
-alias cat='batcat -pP'    # Plain output, no paging
-alias catp='batcat -P'    # No paging, keep other features
-alias catpp='batcat -p'   # With line numbers and paging
-alias bat='batcat'        # Debian packages it as batcat
-{{- else }}
-alias cat='bat -pP'       # Plain output, no paging
-alias catp='bat -P'       # No paging, keep other features
-alias catpp='bat -p'      # With line numbers and paging
-{{- end }}
-
 alias m='micro'
 alias px='ssh root@192.168.1.10'
 alias sp='ssh root@192.168.1.10'
+
 # Chezmoi shortcuts
 alias cm='chezmoi'
 alias cma='chezmoi apply -v'
@@ -87,11 +81,13 @@ alias cmd='chezmoi diff'
 alias cmu='chezmoi update'
 alias cmcd='chezmoi cd'
 alias cmhome='chezmoi cd'
-alias cmr='cmu && cma && source ~/.bashrc'  # Reload the entire chezmoi config and refresh the shell
+alias cmr='cmu && cma && source ~/.bashrc'
+
 # System monitoring
 alias meminfo='free -m -l -t'
 alias diskinfo='lsblk -o NAME,SIZE,TYPE,MOUNTPOINT'
 alias ports='ss -tulanp'
+
 # Network utilities
 alias myip='curl -s ifconfig.me'
 alias localip='ip -br addr show'
@@ -130,6 +126,7 @@ function y() {
     fi
     rm -f -- "$tmp"
 }
+
 # -----------------------------
 # GUI-only aliases and settings
 # -----------------------------
