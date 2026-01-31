@@ -42,8 +42,13 @@ alias cat='batcat -pp --color=always'
 alias bat='batcat -pp --color=always'
 alias fd='fdfind'
 # Maintenance: Clean apt, logs, and docker images in one go
-# Replace the old maintain line with this "Universal" version:
-alias maintain='$(command -v sudo) apt update && $(command -v sudo) apt upgrade -y && $(command -v sudo) apt autoremove -y && $(command -v sudo) apt clean && $(command -v sudo) journalctl --vacuum-time=7d && $(command -v sudo) docker image prune -f'
+{{- if or (eq .chezmoi.hostname "proxmox") (eq .chezmoi.hostname "pbs") }}
+# Host and PBS specific (No Docker, use dist-upgrade)
+alias maintain='apt update && apt dist-upgrade -y && apt autoremove -y && apt clean && journalctl --vacuum-time=7d'
+{{- else }}
+# Standard LXC/VM (Includes Docker cleanup)
+alias maintain='S=$(command -v sudo); $S apt update && $S apt upgrade -y && $S apt autoremove -y && $S apt clean && $S journalctl --vacuum-time=7d && $S docker image prune -f'
+{{- end }}
 {{- end }}
 
 # Quick navigation
