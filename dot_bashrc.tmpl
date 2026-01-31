@@ -42,7 +42,8 @@ alias cat='batcat -pp --color=always'
 alias bat='batcat -pp --color=always'
 alias fd='fdfind'
 # Maintenance: Clean apt, logs, and docker images in one go
-alias maintain='sudo apt update && sudo apt upgrade -y && sudo apt autoremove -y && sudo apt clean && sudo journalctl --vacuum-time=7d && docker image prune -f'
+# Replace the old maintain line with this "Universal" version:
+alias maintain='$(command -v sudo) apt update && $(command -v sudo) apt upgrade -y && $(command -v sudo) apt autoremove -y && $(command -v sudo) apt clean && $(command -v sudo) journalctl --vacuum-time=7d && $(command -v sudo) docker image prune -f'
 {{- end }}
 
 # Quick navigation
