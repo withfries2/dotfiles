@@ -43,11 +43,20 @@ alias bat='batcat -pp --color=always'
 alias fd='fdfind'
 # Maintenance: Clean apt, logs, and docker images in one go
 {{- if or (eq .chezmoi.hostname "proxmox") (eq .chezmoi.hostname "pbs") }}
-# Host and PBS specific (No Docker, use dist-upgrade)
+# Host and PBS specific
 alias maintain='apt update && apt dist-upgrade -y && apt autoremove -y && apt clean && journalctl --vacuum-time=7d'
+
+# Smart Health Check
+{{- if eq .chezmoi.hostname "proxmox" }}
+alias health='pvecm status && pveversion -v'  # Cluster and Version health for PVE
 {{- else }}
-# Standard LXC/VM (Includes Docker cleanup)
+alias health='proxmox-backup-manager datastore list' # Backup storage health for PBS
+{{- end }}
+
+{{- else }}
+# Standard LXC/VM
 alias maintain='S=$(command -v sudo); $S apt update && $S apt upgrade -y && $S apt autoremove -y && $S apt clean && $S journalctl --vacuum-time=7d && $S docker image prune -f'
+alias health='dps' # Docker process summary
 {{- end }}
 {{- end }}
 
