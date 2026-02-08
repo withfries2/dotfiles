@@ -1,6 +1,20 @@
 #!/bin/bash
 set -euo pipefail
 
+# Handle sudo when running as root (common on Proxmox/LXC)
+sudo() {
+    if [ "$EUID" -eq 0 ]; then
+        "$@"
+    else
+        if command -v sudo &> /dev/null; then
+            command sudo "$@"
+        else
+            echo "❌ Error: sudo is required but not installed." >&2
+            exit 1
+        fi
+    fi
+}
+
 {{ $osid := .chezmoi.osRelease.id -}}
 {{ $role := "server" -}} {{/* Default to server for homelab/LXC comfort */}}
 {{ if hasKey . "role" -}}
