@@ -3,21 +3,9 @@ Host pve
     HostName 192.168.1.10
     User root
 
-# 1000 Series (Subnet 10) - Maps 10XX to 192.168.10.XX
-Host 10??
-    # This takes the last two digits of your input (e.g., 10 from 1010)
-    # and puts it at the end of the IP.
-    HostName 192.168.10.%h
-    # Note: If your system doesn't resolve '1010' to '10' automatically,
-    # it is safer to use the specific mapping below or a shell alias.
+# Catch-all for Proxmox Subnets
+# This ensures that even if you use standard 'ssh', the user is correct
+Host 192.168.*.*
     User root
-
-# 2000 Series (Subnet 20) - Maps 20XX to 192.168.20.XX
-Host 20??
-    HostName 192.168.20.%h
-    User root
-
-# 3000 Series (Subnet 30) - Maps 30XX to 192.168.30.XX
-Host 30??
-    HostName 192.168.30.%h
-    User root
+    # Ensures Ghostty features work on old LXC containers
+    SetEnv TERM=xterm-256color
