@@ -1,0 +1,125 @@
+# ~/.aliases
+# -----------------------------------------------------------------------------
+# 0. CLEANUP LEGACY DEFAULTS
+# -----------------------------------------------------------------------------
+unalias l alert egrep fgrep 2>/dev/null
+
+# -----------------------------------------------------------------------------
+# 1. GHOSTTY & PROXMOX SMART SSH
+# -----------------------------------------------------------------------------
+px() {
+    local input="$1"
+    local target=""
+
+    # 1. Default to the Proxmox Host
+    if [[ -z "$input" || "$input" == "pve" ]]; then
+        target="root@192.168.1.10"
+    # 2. Logic for LXC IDs (e.g., px 1010 -> 192.168.10.10)
+    elif [[ "$input" =~ ^([0-9]{2})([0-9]{2})$ ]]; then
+        local subnet=$((10#${BASH_REMATCH[1]}))
+        local host=$((10#${BASH_REMATCH[2]}))
+        target="root@192.168.$subnet.$host"
+        echo "🔗 Connecting to LXC $input at $target..."
+    else
+        target="$input"
+    fi
+
+    # Using standard ssh prevents the Ghostty CLI error when already inside a terminal
+    ssh "$target"
+}
+
+alias fix-term='export TERM=xterm-256color'
+alias lxc-enter='TERM=xterm-256color pct enter'
+
+# -----------------------------------------------------------------------------
+# 2. CORE UTILITIES & EDITORS
+# -----------------------------------------------------------------------------
+alias m='micro'
+alias v='vim'
+alias n='nano'
+alias vi='vim'
+alias c='clear'
+alias q='exit'
+alias decompress='tar -xzf'
+alias path='echo -e ${PATH//:/\\n}'
+alias myip='curl -s ifconfig.me'
+
+# -----------------------------------------------------------------------------
+# 3. MODERN CLI REPLACEMENTS
+# -----------------------------------------------------------------------------
+alias ls='eza --icons --group-directories-first'
+alias ll='eza -l --icons --group-directories-first --git'
+alias la='eza -a --icons --group-directories-first'
+alias lsa='eza -la --icons --group-directories-first --git'
+alias lt='eza --tree --level=2 --icons'
+alias lta='eza -a --tree --level=2 --icons'
+
+# bat: The modern cat
+# 1. First, remove any existing alias to avoid function name conflicts
+unalias cat 2>/dev/null
+
+# 2. Define the smart function
+cat() {
+    # If no arguments (e.g., piping), just run batcat plain
+    if [ $# -eq 0 ]; then
+        command batcat --style=plain --paging=never --color=always
+        return
+    fi
+
+    local target="$1"
+    # If it's a template, force the specific long-form syntax name
+    if [[ "$target" == *.tmpl ]]; then
+        command batcat --style=plain --paging=never --color=always --language="Bourne Again Shell (bash)" "$@"
+    else
+        # For everything else, let bat detect it naturally
+        command batcat --style=plain --paging=never --color=always "$@"
+    fi
+}
+
+alias grep='rg'
+alias find='fd'
+alias top='btm'
+alias du='duf'
+
+# -----------------------------------------------------------------------------
+# 4. NAVIGATION & DIRECTORIES
+# -----------------------------------------------------------------------------
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+alias -- -='cd -'
+alias cdd='cd ~/docker'
+alias cmhome='cd ~/.local/share/chezmoi'
+
+# -----------------------------------------------------------------------------
+# 5. CHEZMOI MANAGEMENT
+# -----------------------------------------------------------------------------
+alias cm='chezmoi'
+alias cma='chezmoi apply -v'
+alias cmd='chezmoi diff'
+alias cme='chezmoi edit'
+alias cmu='chezmoi update'
+alias cmr='cmu && cma && reload'
+alias reload='source ~/.bashrc || source ~/.zshrc'
+
+# -----------------------------------------------------------------------------
+# 6. GIT SHORTCUTS
+# -----------------------------------------------------------------------------
+alias g='git'
+alias gs='git status'
+alias ga='git add'
+alias gaa='git add --all'
+alias gc='git commit -m'
+alias gp='git push'
+alias gl='git log --oneline --graph --decorate'
+
+# -----------------------------------------------------------------------------
+# 7. DOCKER & CONTAINER OPS
+# -----------------------------------------------------------------------------
+alias d='docker'
+alias dc='docker compose'
+alias dcu='docker compose up -d'
+alias dcd='docker compose down'
+alias dcr='docker compose restart'
+alias dps='docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"'
+alias dlogs='docker logs --tail 50 -f'

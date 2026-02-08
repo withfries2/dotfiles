@@ -1,4 +1,4 @@
-import { Editor } from "fresh";
+kkimport { Editor } from "fresh";
 
 Editor.on("init", (editor) => {
   // File Associations
@@ -9,22 +9,22 @@ Editor.on("init", (editor) => {
     ".bash_aliases": "bash",
     ".zshrc": "bash",
     ".profile": "bash",
-    
+
     // Chezmoi & Scripting templates
     "*.tmpl": "bash",
-    
-    {{- /* Arch Linux specific files */ -}}
-    {{- if eq .chezmoi.os "linux" }}
-    {{- if (stat "/etc/arch-release") }}
+
+    // --- OS-Specific File Types ---
+    {{- if eq .osid "arch" }}
     "PKGBUILD": "bash",
     "*.install": "bash",
     {{- end }}
-    {{- end }}
-    
+
     // Web & Logic
     "*.ts": "typescript",
     "*.tsx": "typescript",
-    "*.py": "python"
+    "*.py": "python",
+    "*.yaml": "yaml",
+    "*.toml": "toml"
   });
 
   // Theme Settings
@@ -35,20 +35,15 @@ Editor.on("init", (editor) => {
     "token.comment": "#6A9955"
   });
 
-  // --- Indentation Settings ---
-  // These settings attempt to define consistent formatting rules.
-  // Note: The specific function name might be 'editor.setLspConfig'
-  // or 'editor.setEditorConfig' depending on your fresh version.
-
+  // --- Editor Behavior ---
+  // Applying role-based configuration if needed
   try {
-    // A common way to define core editor behavior in modern editors
     editor.setEditorConfig({
-      insertSpaces: true,  // Use spaces instead of tabs
-      tabSize: 4,          // 4 spaces per tab stop
-      detectIndentation: true // Automatically detect existing indentation
+      insertSpaces: true,
+      tabSize: {{ if eq .role "server" }}2{{ else }}4{{ end }}, // Smaller tabs for server configs
+      detectIndentation: true
     });
   } catch (e) {
-    // Fallback or ignore if the API isn't available
     console.log("Could not apply editor config via setEditorConfig");
   }
 });

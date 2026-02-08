@@ -1,0 +1,93 @@
+# =============================================================================
+# SHARED SHELL ALIASES (Comprehensive Master List)
+# =============================================================================
+
+# --- Navigation & Basics ---
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+alias m='micro'
+alias v='vim'
+alias decompress='tar -xzf'
+alias cdd='cd ~/docker'
+alias cmhome='cd ~/.local/share/chezmoi'
+
+# --- Proxmox / Homelab ---
+alias px='ssh root@192.168.1.10'
+alias sp='ssh root@192.168.1.10'
+
+# --- Modern CLI Replacements ---
+alias ls='eza -lh --group-directories-first --icons=auto'
+alias lsa='ls -a'
+alias lt='eza --tree --icons=auto'
+alias cat='bat --paging=never'
+alias find='fd'
+alias grep='rg'
+
+# --- Git Enhancements ---
+alias g='git'
+alias gst='git status -sb'
+alias glog='git log --oneline --graph --decorate --all'
+alias gdiff='git diff --color-words'
+alias gaa='git add --all'
+alias gcm='git commit -m'
+alias gcam='git commit -a -m'
+alias gcad='git commit -a --amend'
+
+# --- Docker & Compose ---
+alias d='docker'
+alias dimg='docker images --format "table {{`{{.Repository}}`}}\t{{`{{.Tag}}`}}\t{{`{{.Size}}`}}"'
+alias dclean='docker system prune -af'
+alias dstats='docker stats --no-stream'
+alias dc='docker compose'
+alias dcu='docker compose up -d'
+alias dcd='docker compose down'
+alias dcr='docker compose restart'
+alias dcl='docker compose logs -f --tail=50'
+
+# --- Network & System ---
+alias myip='curl -s ifconfig.me'
+alias localip='ifconfig | grep "inet " | grep -v 127.0.0.1'
+alias ports='lsof -iTCP -sTCP:LISTEN -n -P'
+
+{{ if eq .chezmoi.os "darwin" -}}
+alias meminfo='vm_stat'
+alias diskinfo='df -h'
+{{ else -}}
+alias meminfo='free -h'
+alias diskinfo='df -h'
+{{- end }}
+
+# --- System Maintenance (OS-Aware) ---
+{{ if eq .osid "arch" -}}
+alias maintain='sudo pacman -Syu'
+alias health='checkupdates && repo-clean'
+alias clean='sudo pacman -Rns $(pacman -Qtdq)'
+{{ else if eq .osid "pop" -}}
+alias maintain='sudo apt update && sudo apt upgrade -y'
+alias health='sudo apt autoremove && sudo apt autoclean'
+alias clean='sudo apt purge && sudo apt autoremove'
+{{- end }}
+
+# --- Role-Specific Aliases ---
+{{ if or (eq .role "desktop") (eq .role "laptop") -}}
+alias web='google-chrome-stable'
+alias browser='google-chrome-stable'
+{{- end }}
+
+# --- Chezmoi Shortcuts ---
+alias cm='chezmoi'
+alias cma='chezmoi apply -v'
+alias cmd='chezmoi diff'
+alias cme='chezmoi edit'
+alias cmu='chezmoi update'
+alias cmr='cmu && cma && reload'
+
+# --- Universal Helper ---
+alias reload='source ~/.${SHELL##*/}rc'
+alias dotfiles='cd ~/.local/share/chezmoi'
+
+# --- Functions ---
+mkcd() {
+    mkdir -p "$1" && cd "$1"
+}

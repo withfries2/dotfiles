@@ -1,12 +1,27 @@
 #!/bin/bash
-# Install Ghostty terminfo if not already present
+# =============================================================================
+# GHOSTTY TERMINFO INSTALLER
+# =============================================================================
+# Ensures Ghostty terminal features work correctly when SSHing into this machine.
+# This is especially vital for headless Proxmox/LXC nodes.
+
+{{- /* No role restriction here because even servers need terminfo to display correctly */ -}}
+
+set -euo pipefail
+
+# Only run if tic (terminfo compiler) is available
+if ! command -v tic >/dev/null 2>&1; then
+    echo "⚠️  tic not found, skipping Ghostty terminfo installation."
+    exit 0
+fi
 
 if ! infocmp xterm-ghostty >/dev/null 2>&1; then
-    echo "Installing Ghostty terminfo..."
-    
+    echo "🚀 Installing Ghostty terminfo for {{ .chezmoi.hostname }}..."
+
     # Create temporary terminfo file
-    cat > /tmp/xterm-ghostty.terminfo << 'TERMINFO'
-#       Reconstructed via infocmp from file: /Applications/Ghostty.app/Contents/Resources/terminfo/78/xterm-ghostty
+    # Source: https://github.com/ghostty-org/ghostty
+    TEMP_TERMINFO=$(mktemp)
+    cat << 'TERMINFO' > "$TEMP_TERMINFO"
 xterm-ghostty|ghostty|Ghostty,
         am, bce, ccc, hs, km, mc5i, mir, msgr, npc, xenl,
         colors#256, cols#80, it#8, lines#24, pairs#32767,
@@ -59,11 +74,9 @@ xterm-ghostty|ghostty|Ghostty,
         smul=\E[4m, tbc=\E[3g, tsl=\E]2;, u6=\E[%i%d;%dR, u7=\E[6n,
         u8=\E[?%[;0123456789]c, u9=\E[c, vpa=\E[%i%p1%dd,
 TERMINFO
-    
-    # Install it
-    tic -x /tmp/xterm-ghostty.terminfo 2>&1 | grep -v "older tic versions"
-    rm /tmp/xterm-ghostty.terminfo
-    echo "✓ Ghostty terminfo installed successfully"
-else
-    echo "✓ Ghostty terminfo already present"
+
+    # Install to the user's home directory (~/.terminfo)
+    tic -x "$TEMP_TERMINFO"
+    rm "$TEMP_TERMINFO"
+    echo "✓ Ghostty terminfo installed."
 fi

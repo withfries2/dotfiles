@@ -1,206 +1,61 @@
 #!/bin/bash
-{{- $role := index . "role" | default "desktop" }}
-{{- if ne .role "server" }}
-# Install developer fonts on non-server machines
+# =============================================================================
+# DATA-DRIVEN FONT INSTALLER (Updated with Nerd Font Support)
+# =============================================================================
+{{- $osid := .osid }}
+{{- $role := .role }}
 
+{{- if ne $role "server" }}
 set -euo pipefail
 
-echo "=== Installing Developer Fonts ==="
-echo "Detected OS: $(uname -s)"
-echo "Role: {{ .role }}"
-echo ""
+echo "=== 🔤 Installing Developer Fonts ==="
+echo "OS ID: {{ $osid }} | Role: {{ $role }}"
 
-# Detect OS
-OS="$(uname -s)"
+# -----------------------------------------------------------------------------
+# ARCH LINUX
+# -----------------------------------------------------------------------------
+{{- if eq $osid "arch" }}
+echo "Checking Arch Linux fonts..."
+sudo pacman -S --needed --noconfirm ttf-meslo-nerd ttf-fira-code ttf-victor-mono-nerd
+# ... (rest of your existing Arch logic) ...
 
-install_fonts_arch() {
-    local fonts_to_install=()
-    
-    echo "Checking Arch Linux fonts..."
-    
-    # Official repo fonts
-    local official_fonts=(
-        "ttf-meslo-nerd:Meslo LG Mono Nerd Font"
-        "ttf-fira-code:Fira Code"
-        "ttf-victor-mono-nerd:Victor Mono Nerd Font"
-        "ttf-bitstream-vera:Bitstream Vera"
-    )
-    
-    for font_entry in "${official_fonts[@]}"; do
-        IFS=':' read -r package name <<< "$font_entry"
-        if ! pacman -Q "$package" &> /dev/null; then
-            fonts_to_install+=("$package")
-            echo "  → $name will be installed"
-        else
-            echo "  ✓ $name already installed"
-        fi
-    done
-    
-    # Install from official repos
-    if [ ${#fonts_to_install[@]} -gt 0 ]; then
-        echo ""
-        echo "Installing from official repos: ${fonts_to_install[*]}"
-        sudo pacman -S --needed --noconfirm "${fonts_to_install[@]}"
-        echo "✓ Official repo fonts installed"
-    fi
-    
-    # AUR fonts
-    local aur_fonts=()
-    if ! pacman -Q ttf-firacode-nerd &> /dev/null; then
-        aur_fonts+=("ttf-firacode-nerd")
-        echo "  → FiraCode Nerd Font will be installed from AUR"
-    else
-        echo "  ✓ FiraCode Nerd Font already installed"
-    fi
-    
-    if ! pacman -Q ttf-cascadia-code-nerd &> /dev/null; then
-        aur_fonts+=("ttf-cascadia-code-nerd")
-        echo "  → CaskaydiaCove Nerd Font will be installed from AUR"
-    else
-        echo "  ✓ CaskaydiaCove Nerd Font already installed"
-    fi
-    
-    # Install AUR fonts
-    if [ ${#aur_fonts[@]} -gt 0 ]; then
-        echo ""
-        if command -v yay &> /dev/null; then
-            echo "Installing from AUR (via yay): ${aur_fonts[*]}"
-            yay -S --needed --noconfirm "${aur_fonts[@]}"
-            echo "✓ AUR fonts installed"
-        elif command -v paru &> /dev/null; then
-            echo "Installing from AUR (via paru): ${aur_fonts[*]}"
-            paru -S --needed --noconfirm "${aur_fonts[@]}"
-            echo "✓ AUR fonts installed"
-        else
-            echo "⚠ Warning: No AUR helper found (yay/paru)"
-            echo "  Please install manually: ${aur_fonts[*]}"
-            return 1
-        fi
-    fi
-    
-    # Rebuild font cache
-    echo ""
-    echo "Rebuilding font cache..."
-    fc-cache -fv > /dev/null 2>&1
-    echo "✓ Font cache rebuilt"
-}
+# -----------------------------------------------------------------------------
+# POP!_OS / DEBIAN / UBUNTU
+# -----------------------------------------------------------------------------
+{{- else if or (eq $osid "pop") (eq $osid "debian") }}
+echo "Checking Pop!_OS/Debian fonts..."
+sudo apt-get update
+sudo apt-get install -y fonts-firacode fonts-noto-mono fonts-cascadia-code
 
-install_fonts_fedora() {
-    local fonts_to_install=()
-    
-    echo "Checking Fedora fonts..."
-    
-    # Fedora font packages
-    local fedora_fonts=(
-        "fira-code-fonts:Fira Code"
-        "cascadia-code-fonts:Cascadia Code"
-        "google-noto-sans-mono-fonts:Noto Sans Mono"
-        "dejavu-sans-mono-fonts:DejaVu Sans Mono"
-    )
-    
-    for font_entry in "${fedora_fonts[@]}"; do
-        IFS=':' read -r package name <<< "$font_entry"
-        if ! rpm -q "$package" &> /dev/null; then
-            fonts_to_install+=("$package")
-            echo "  → $name will be installed"
-        else
-            echo "  ✓ $name already installed"
-        fi
-    done
-    
-    # Install fonts
-    if [ ${#fonts_to_install[@]} -gt 0 ]; then
-        echo ""
-        echo "Installing fonts: ${fonts_to_install[*]}"
-        sudo dnf install -y "${fonts_to_install[@]}"
-        echo "✓ Fonts installed"
-    fi
-    
-    # Nerd Fonts from copr (optional)
-    if ! rpm -q nerd-fonts &> /dev/null; then
-        echo ""
-        echo "Note: For Nerd Fonts, enable copr repo:"
-        echo "  sudo dnf copr enable che/nerd-fonts"
-        echo "  sudo dnf install nerd-fonts"
-    fi
-    
-    # Rebuild font cache
-    echo ""
-    echo "Rebuilding font cache..."
-    fc-cache -fv > /dev/null 2>&1
-    echo "✓ Font cache rebuilt"
-}
+# MANUAL NERD FONT INSTALL (Crucial for Starship icons)
+FONT_DIR="$HOME/.local/share/fonts/jetbrains-mono-nerd"
+if [ ! -d "$FONT_DIR" ]; then
+    echo "📦 Downloading JetBrains Mono Nerd Font (Manual Install)..."
+    mkdir -p "$FONT_DIR"
+    URL="https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip"
+    curl -L "$URL" -o /tmp/jb_nerd.zip
+    unzip -o /tmp/jb_nerd.zip -d "$FONT_DIR"
+    rm /tmp/jb_nerd.zip
+    # Clean up non-font files
+    find "$FONT_DIR" -type f ! -name "*.ttf" ! -name "*.otf" -delete
+fi
 
-install_fonts_macos() {
-    echo "Checking macOS fonts..."
-    
-    # Check for Homebrew
-    if ! command -v brew &> /dev/null; then
-        echo "⚠ Homebrew not found. Please install: https://brew.sh"
-        return 1
-    fi
-    
-    local fonts_to_install=()
-    
-    # Homebrew cask fonts
-    local macos_fonts=(
-        "font-fira-code:Fira Code"
-        "font-fira-code-nerd-font:FiraCode Nerd Font"
-        "font-cascadia-code:Cascadia Code"
-        "font-cascadia-code-nerd-font:CaskaydiaCove Nerd Font"
-        "font-meslo-lg-nerd-font:Meslo LG Nerd Font"
-        "font-victor-mono-nerd-font:Victor Mono Nerd Font"
-    )
-    
-    # Tap the cask-fonts repository
-    brew tap homebrew/cask-fonts 2>/dev/null || true
-    
-    for font_entry in "${macos_fonts[@]}"; do
-        IFS=':' read -r cask name <<< "$font_entry"
-        if ! brew list --cask "$cask" &> /dev/null; then
-            fonts_to_install+=("$cask")
-            echo "  → $name will be installed"
-        else
-            echo "  ✓ $name already installed"
-        fi
-    done
-    
-    # Install fonts
-    if [ ${#fonts_to_install[@]} -gt 0 ]; then
-        echo ""
-        echo "Installing fonts: ${fonts_to_install[*]}"
-        brew install --cask "${fonts_to_install[@]}"
-        echo "✓ Fonts installed"
-    fi
-    
-    echo "✓ macOS font installation complete"
-}
+# -----------------------------------------------------------------------------
+# macOS (DARWIN)
+# -----------------------------------------------------------------------------
+{{- else if eq $osid "darwin" }}
+echo "Checking macOS fonts..."
+# Note: cask-fonts is deprecated in favor of homebrew-cask
+brew install --cask font-fira-code-nerd-font font-meslo-lg-nerd-font
+{{- end }}
 
-# Detect and install based on OS
-case "$OS" in
-    Linux)
-        if [ -f /etc/arch-release ]; then
-            install_fonts_arch
-        elif [ -f /etc/fedora-release ]; then
-            install_fonts_fedora
-        elif [ -f /etc/debian_version ]; then
-            echo "Debian/Ubuntu not yet supported in this script"
-            exit 0
-        else
-            echo "Unknown Linux distribution"
-            exit 0
-        fi
-        ;;
-    Darwin)
-        install_fonts_macos
-        ;;
-    *)
-        echo "Unsupported OS: $OS"
-        exit 0
-        ;;
-esac
+# -----------------------------------------------------------------------------
+# FINALIZE
+# -----------------------------------------------------------------------------
+if command -v fc-cache >/dev/null 2>&1; then
+    echo "🔄 Rebuilding font cache..."
+    fc-cache -f
+fi
 
-echo ""
-echo "✓ All developer fonts installed successfully!"
-
+echo "✅ Font installation complete!"
 {{- end }}

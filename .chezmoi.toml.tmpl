@@ -1,0 +1,37 @@
+{{- /* --- Initial Setup --- */ -}}
+{{- $osid := .chezmoi.os -}}
+{{- if hasKey .chezmoi.osRelease "id" -}}
+{{-   $osid = .chezmoi.osRelease.id -}}
+{{- end -}}
+
+{{- /* --- Auto-Detect Role --- */ -}}
+{{- $role := "desktop" -}}
+
+{{- /* 1. Detect Server/Headless (LXC, Proxmox, WSL) */ -}}
+{{- /* We check if the kernel version contains "generic". If not, it's likely a specialized server/container kernel */ -}}
+{{- $kernel := .chezmoi.kernel.osrelease | lower -}}
+{{- if or (env "IS_SERVER") (not (contains "generic" $kernel)) -}}
+{{-   $role = "server" -}}
+{{- end -}}
+
+{{- /* 2. Detect Laptop by chassis type */ -}}
+{{- if hasKey .chezmoi "chassis" -}}
+{{-   if eq .chezmoi.chassis "laptop" -}}
+{{-     $role = "laptop" -}}
+{{-   end -}}
+{{- end -}}
+
+{{- /* 3. Specific Hostname Overrides */ -}}
+{{- if eq .chezmoi.hostname "pop-os" "omarchy-laptop" -}}
+{{-   $role = "laptop" -}}
+{{- end -}}
+
+{{- /* --- Optional: Prompt for first-time builds --- */ -}}
+{{- if not (hasKey . "role") -}}
+{{-   $role = promptString "Machine role (desktop|laptop|server)" $role -}}
+{{- end -}}
+
+[data]
+    role = {{ $role | quote }}
+    osid = {{ $osid | quote }}
+    is_wsl = {{ contains "microsoft" $kernel }}

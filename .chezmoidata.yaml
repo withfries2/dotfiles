@@ -1,0 +1,70 @@
+# Package Manifest: Data-driven installation lists
+packages:
+  universal:
+    - curl
+    - git
+    - zsh
+    - fzf
+    - zoxide
+    - micro
+    - btop
+    - ripgrep
+
+  native:
+    arch:
+      - base-devel
+      - eza
+      - bat
+      - fd
+      - lazygit
+      - btm
+      - pacman-contrib
+    pop:
+      - build-essential
+      - bat
+      - fd-find
+    debian:
+      - build-essential
+    darwin:
+      - coreutils
+
+  roles:
+    laptop:
+      - brightnessctl
+    desktop:
+      - hyprland
+    server:
+      - htop
+
+binaries:
+  - name: starship
+    repo: starship/starship
+    pattern: "x86_64-unknown-linux-(gnu|musl)\\.tar\\.gz"
+  - name: yazi
+    repo: sxyazi/yazi
+    pattern: "x86_64-unknown-linux-gnu\\.zip"
+  - name: lazygit
+    repo: jesseduffield/lazygit
+    pattern: "Linux_x86_64\\.tar\\.gz"
+  - name: lazydocker
+    repo: jesseduffield/lazydocker
+    pattern: "Linux_x86_64\\.tar\\.gz"
+  - name: eza
+    repo: eza-community/eza
+    pattern: "x86_64-unknown-linux-gnu\\.tar\\.gz"
+
+guis:
+  - name: google-chrome
+    repo: "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"
+    type: deb
+  - name: vscode
+    repo: "https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64"
+    type: deb
+  - name: ghostty
+    repo: "mkasberg/ghostty-ubuntu"
+    pattern: "ghostty_.*amd64_24.04.deb"
+    type: deb_github
+  - name: zen-browser
+    repo: "zen-browser/desktop"
+    pattern: "zen\\.linux-x86_64\\.tar\\.xz"
+    type: github_binary
