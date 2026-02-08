@@ -2,10 +2,11 @@
 # =============================================================================
 # GHOSTTY TERMINFO INSTALLER
 # =============================================================================
-# Ensures Ghostty terminal features work correctly when SSHing into this machine.
-# This is especially vital for headless Proxmox/LXC nodes.
-
-{{- /* No role restriction here because even servers need terminfo to display correctly */ -}}
+# Description:
+#   Ensures Ghostty terminal features work correctly when SSHing into this machine.
+#   This installs the terminfo into ~/.terminfo, making it available for the
+#   current user without requiring root/sudo.
+# =============================================================================
 
 set -euo pipefail
 
@@ -15,12 +16,16 @@ if ! command -v tic >/dev/null 2>&1; then
     exit 0
 fi
 
+# Check if the terminfo is already installed to avoid redundant work
 if ! infocmp xterm-ghostty >/dev/null 2>&1; then
-    echo "🚀 Installing Ghostty terminfo for {{ .chezmoi.hostname }}..."
+    echo "🚀 Installing Ghostty terminfo for $(hostname)..."
 
     # Create temporary terminfo file
-    # Source: https://github.com/ghostty-org/ghostty
+    # Source: Official Ghostty Repository (https://github.com/ghostty-org/ghostty)
     TEMP_TERMINFO=$(mktemp)
+    
+    # We use single quotes around 'TERMINFO' to prevent the shell from
+    # attempting to expand symbols like % and $ inside the block.
     cat << 'TERMINFO' > "$TEMP_TERMINFO"
 xterm-ghostty|ghostty|Ghostty,
         am, bce, ccc, hs, km, mc5i, mir, msgr, npc, xenl,
@@ -75,8 +80,10 @@ xterm-ghostty|ghostty|Ghostty,
         u8=\E[?%[;0123456789]c, u9=\E[c, vpa=\E[%i%p1%dd,
 TERMINFO
 
-    # Install to the user's home directory (~/.terminfo)
+    # Compile the terminfo to ~/.terminfo
     tic -x "$TEMP_TERMINFO"
     rm "$TEMP_TERMINFO"
-    echo "✓ Ghostty terminfo installed."
+    echo "✓ Ghostty terminfo installed successfully."
+else
+    echo "✓ Ghostty terminfo already present, skipping."
 fi
