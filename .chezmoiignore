@@ -1,6 +1,3 @@
 {{- if eq .chezmoi.os "darwin" }}
 .bashrc
 {{- end }}
-{{- if ne .chezmoi.os "darwin" }}
-.zshrc
-{{- end }}
