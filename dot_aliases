@@ -79,6 +79,7 @@ cat() {
 alias grep='rg'
 alias find='fd'
 alias top='btm'
+alias lg='lazygit'
 alias du='duf'
 
 # -----------------------------------------------------------------------------

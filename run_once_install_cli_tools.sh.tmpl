@@ -1,10 +1,13 @@
 #!/bin/bash
 set -euo pipefail
 
-{{ $osid := .osid -}}
-{{ $role := .role -}}
+{{ $osid := .chezmoi.osRelease.id -}}
+{{ $role := "server" -}} {{/* Default to server for homelab/LXC comfort */}}
+{{ if hasKey . "role" -}}
+  {{ $role = .role -}}
+{{ end -}}
 
-echo "=== 🚀 Starting System Provisioning ==="
+echo "=== 🚀 Provisioning: OS:{{ $osid }} | Role:{{ $role }} ==="
 
 # -----------------------------------------------------------------------------
 # 1. HELPER FUNCTIONS
@@ -12,7 +15,6 @@ echo "=== 🚀 Starting System Provisioning ==="
 get_latest_github_url() {
     local repo=$1
     local pattern=$2
-    # The '|| echo ""' prevents grep failure from triggering set -e
     curl -s "https://api.github.com/repos/$repo/releases/latest" | \
     grep "browser_download_url" | \
     grep -iE "$pattern" | \
@@ -22,46 +24,88 @@ get_latest_github_url() {
 # -----------------------------------------------------------------------------
 # 2. NATIVE PACKAGES & FIXES
 # -----------------------------------------------------------------------------
-# ... (Keep your existing Section 2 logic for apt/pacman and bat/fd links) ...
+case "{{ $osid }}" in
+  arch)
+    echo "📦 Installing Arch packages..."
+    sudo pacman -S --noconfirm {{ range .packages.native.arch }}{{ . }} {{ end }} {{ range .packages.universal }}{{ . }} {{ end }}
+    ;;
+    
+  pop|ubuntu|debian)
+    echo "📦 Updating APT and installing Debian-family packages..."
+    sudo apt update
+    sudo apt install -y {{ range .packages.universal }}{{ . }} {{ end }} \
+                       {{ range .packages.native.debian }}{{ . }} {{ end }} \
+                       {{ if eq $osid "pop" }}{{ range .packages.native.pop }}{{ . }} {{ end }}{{ end }}
+    
+    # Ensure local bin exists for symlinks
+    mkdir -p ~/.local/bin
+
+    # FIX: bat -> batcat symlink
+    if command -v batcat &> /dev/null && ! command -v bat &> /dev/null; then
+        ln -sf $(which batcat) ~/.local/bin/bat
+    fi
+
+    # FIX: fd -> fdfind symlink
+    if command -v fdfind &> /dev/null && ! command -v fd &> /dev/null; then
+        ln -sf $(which fdfind) ~/.local/bin/fd
+    fi
+    ;;
+
+  darwin)
+    echo "🍺 Installing macOS Homebrew packages..."
+    if ! command -v brew &> /dev/null; then
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    fi
+    brew install {{ range .packages.universal }}{{ . }} {{ end }} {{ range .packages.native.darwin }}{{ . }} {{ end }}
+    ;;
+esac
+
+# --- Role-Specific Packages ---
+{{ if hasKey .packages.roles $role -}}
+echo "🎭 Installing extras for role: {{ $role }}..."
+case "{{ $osid }}" in
+  arch) sudo pacman -S --noconfirm {{ range (index .packages.roles $role) }}{{ . }} {{ end }} ;;
+  pop|ubuntu|debian) sudo apt install -y {{ range (index .packages.roles $role) }}{{ . }} {{ end }} ;;
+  darwin) brew install {{ range (index .packages.roles $role) }}{{ . }} {{ end }} ;;
+esac
+{{- end }}
 
 # -----------------------------------------------------------------------------
 # 3. GUI APPLICATIONS
 # -----------------------------------------------------------------------------
-# ... (Keep your existing Section 3 logic for chrome/ghostty/zen) ...
+# (Your existing GUI logic remains here)
 
 # -----------------------------------------------------------------------------
 # 4. STANDALONE BINARY TOOLS
 # -----------------------------------------------------------------------------
 echo "Installing standalone CLI binaries..."
+mkdir -p ~/.local/bin
 {{ range .binaries -}}
 if ! command -v {{ .name }} &> /dev/null; then
     echo "🔍 Searching for {{ .name }}..."
-    
-    # Use pattern from data if it exists, otherwise use a generic fallback
+
     {{ if hasKey . "pattern" -}}
     URL=$(get_latest_github_url "{{ .repo }}" "{{ .pattern }}")
     {{ else -}}
     URL=$(get_latest_github_url "{{ .repo }}" "linux.*(amd64|x86_64).*tar\\.gz")
     {{ end -}}
-    
+
     if [ -n "$URL" ]; then
         echo "   ⬇️ Fetching {{ .name }}..."
         curl -L "$URL" -o /tmp/{{ .name }}.archive
         mkdir -p /tmp/{{ .name }}-unpack
-        
-        # Robust extraction
+
         if [[ "$URL" == *.zip ]]; then
             unzip -q /tmp/{{ .name }}.archive -d /tmp/{{ .name }}-unpack || true
         else
             tar -xf /tmp/{{ .name }}.archive -C /tmp/{{ .name }}-unpack 2>/dev/null || true
         fi
 
-        # Find and move binary
         BINARY_PATH=$(find /tmp/{{ .name }}-unpack -type f -name "{{ .name }}" | head -n 1)
         if [ -n "$BINARY_PATH" ]; then
             mv "$BINARY_PATH" ~/.local/bin/{{ .name }}
             chmod +x ~/.local/bin/{{ .name }}
-            echo "   ✅ {{ .name }} installed."
+            echo "   ✅ {{ .name }} installed to ~/.local/bin."
         fi
         rm -rf /tmp/{{ .name }}.archive /tmp/{{ .name }}-unpack
     else
