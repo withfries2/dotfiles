@@ -23,8 +23,6 @@ packages:
     - micro
     - btop
     - ripgrep
-    - btm
-    - eza
     - fd-find
 
   # Role-specific packages (mapped in the install script)
@@ -44,9 +42,14 @@ packages:
 binaries:
   - name: lazygit
     repo: jesseduffield/lazygit
-    # Pattern to match the specific Linux x86_64 archive
     pattern: "Linux_x86_64\\.tar\\.gz"
-
+  - name: btm
+    repo: ClementTsang/bottom
+    pattern: "x86_64-unknown-linux-gnu\\.tar\\.gz"
+  - name: eza
+    repo: eza-community/eza
+    pattern: "x86_64-unknown-linux-gnu\\.tar\\.gz"
+    
 # -----------------------------------------------------------------------------
 # User Information
 # -----------------------------------------------------------------------------
