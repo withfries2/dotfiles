@@ -22,20 +22,24 @@ fi
 # 2. Install chezmoi if missing
 if ! command -v chezmoi &> /dev/null; then
   echo "Installing chezmoi..."
-  sh -c "$(curl -fsLS get.chezmoi.io)" -- -b /root/.local/bin
+  # Changed /root/.local/bin to $HOME/.local/bin
+  sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$HOME/.local/bin"
 fi
 
-export PATH="/root/.local/bin:/usr/local/bin:$PATH"
+# Updated PATH to use current user's home
+export PATH="$HOME/.local/bin:/usr/local/bin:$PATH"
 
 # 3. Init repo on first run
-if [ ! -d /root/.local/share/chezmoi/.git ]; then
+# Updated directory check to use current user's home
+if [ ! -d "$HOME/.local/share/chezmoi/.git" ]; then
   echo "Initializing chezmoi repo..."
   chezmoi init withfries2/dotfiles
 fi
 
 # 4. Pull + apply (including scripts)
 echo "Updating & applying chezmoi (with scripts)..."
+# Added explicit --destination to prevent the "vault-loop"
 chezmoi update --include=scripts --verbose || true
-chezmoi apply --include=scripts --verbose
+chezmoi apply --destination="$HOME" --include=scripts --verbose
 
 echo "=== Bootstrap complete ==="
