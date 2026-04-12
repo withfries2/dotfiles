@@ -50,3 +50,10 @@ fi
 # --- 5. Load Shared Aliases ---
 # Fixed the typo from '.aliase' to '.aliases'
 [[ -f ~/.aliases ]] && source ~/.aliases
+
+{{- if .nvm }}
+# --- 6. NVM (Node Version Manager) ---
+export NVM_DIR="$HOME/.config/nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+{{- end }}
