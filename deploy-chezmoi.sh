@@ -5,13 +5,12 @@
 # Idempotent — safe to run on first install or to re-apply after updates.
 #
 # What it does:
-#   1. Creates ~/.config/chezmoi/chezmoi.toml if missing
-#   2. Installs chezmoi binary if missing
-#   3. Clones withfries2/dotfiles if not already present
-#   4. Runs run_once install scripts (packages, binaries, git config)
-#   5. Installs starship if missing
+#   1. apt install curl git  (only prerequisites chezmoi can't install itself)
+#   2. Creates ~/.config/chezmoi/chezmoi.toml if missing
+#   3. Installs chezmoi binary if missing
+#   4. Clones withfries2/dotfiles if not already present
+#   5. Runs run_once_* scripts (packages, starship, binaries, git config, default shell)
 #   6. Deploys all dotfiles (.zshrc, .aliases, starship.toml, etc.)
-#   7. Sets zsh as the default shell if not already
 # =============================================================================
 
 set -euo pipefail
@@ -33,7 +32,7 @@ echo "=== Bootstrap chezmoi ==="
 if [[ -f /etc/debian_version ]]; then
   echo "→ Installing minimal deps (Debian)..."
   sudo apt-get update -qq
-  sudo apt-get install -y curl git zsh
+  sudo apt-get install -y curl git
 fi
 
 # -----------------------------------------------------------------------------
@@ -85,34 +84,10 @@ echo "→ Running install scripts..."
 chezmoi apply --include=scripts --verbose
 
 # -----------------------------------------------------------------------------
-# 6. Install starship if missing
-# -----------------------------------------------------------------------------
-if ! command -v starship &> /dev/null; then
-  echo "→ Installing starship..."
-  curl -sS https://starship.rs/install.sh | sh -s -- --yes
-else
-  echo "→ starship $(starship --version | head -1) already installed."
-fi
-
-# -----------------------------------------------------------------------------
-# 7. Deploy all dotfiles (.zshrc, .aliases, starship.toml, ssh/config, etc.)
+# 6. Deploy all dotfiles (.zshrc, .aliases, starship.toml, ssh/config, etc.)
 # -----------------------------------------------------------------------------
 echo "→ Deploying dotfiles..."
 chezmoi apply --verbose
-
-# -----------------------------------------------------------------------------
-# 8. Set zsh as default shell
-# -----------------------------------------------------------------------------
-ZSH_PATH=$(command -v zsh)
-CURRENT_SHELL=$(getent passwd "$(whoami)" | cut -d: -f7)
-if [ "$CURRENT_SHELL" != "$ZSH_PATH" ]; then
-  echo "→ Setting default shell to zsh ($ZSH_PATH)..."
-  grep -qxF "$ZSH_PATH" /etc/shells || echo "$ZSH_PATH" | sudo tee -a /etc/shells
-  chsh -s "$ZSH_PATH" "$(whoami)"
-  echo "  ✓ Default shell changed. Re-login or 'exec zsh' to apply."
-else
-  echo "→ Default shell is already zsh."
-fi
 
 echo ""
 echo "=== Bootstrap complete ==="

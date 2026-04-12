@@ -24,6 +24,7 @@ packages:
     - btop
     - ripgrep
     - fd-find
+    - starship
 
   # Role-specific packages (mapped in the install script)
   roles:

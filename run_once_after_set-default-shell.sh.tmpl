@@ -1,0 +1,29 @@
+#!/bin/bash
+set -euo pipefail
+
+# Handle sudo when running as root (common on Proxmox/LXC)
+sudo() {
+    if [ "$EUID" -eq 0 ]; then
+        "$@"
+    else
+        command sudo "$@"
+    fi
+}
+
+ZSH_PATH=$(command -v zsh 2>/dev/null || true)
+
+if [ -z "$ZSH_PATH" ]; then
+    echo "⚠️  zsh not found, skipping default shell change."
+    exit 0
+fi
+
+CURRENT_SHELL=$(getent passwd "$(whoami)" | cut -d: -f7)
+
+if [ "$CURRENT_SHELL" != "$ZSH_PATH" ]; then
+    echo "→ Setting default shell to zsh ($ZSH_PATH)..."
+    grep -qxF "$ZSH_PATH" /etc/shells || echo "$ZSH_PATH" | sudo tee -a /etc/shells
+    sudo chsh -s "$ZSH_PATH" "$(whoami)"
+    echo "  ✓ Default shell changed. Re-login or 'exec zsh' to apply."
+else
+    echo "→ Default shell is already zsh."
+fi
