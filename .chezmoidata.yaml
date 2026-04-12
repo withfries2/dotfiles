@@ -24,7 +24,6 @@ packages:
     - btop
     - ripgrep
     - fd-find
-    - starship
 
   # Role-specific packages (mapped in the install script)
   roles:
@@ -49,6 +48,9 @@ binaries:
     pattern: "x86_64-unknown-linux-gnu\\.tar\\.gz"
   - name: eza
     repo: eza-community/eza
+    pattern: "x86_64-unknown-linux-gnu\\.tar\\.gz"
+  - name: starship
+    repo: starship-rs/starship
     pattern: "x86_64-unknown-linux-gnu\\.tar\\.gz"
     
 # -----------------------------------------------------------------------------
