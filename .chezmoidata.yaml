@@ -8,6 +8,7 @@ packages:
       - pacman-contrib
     debian:
       - build-essential
+      - bat
     pop:
       - build-essential
     darwin:

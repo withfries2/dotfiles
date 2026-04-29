@@ -54,9 +54,13 @@ case "{{ $osid }}" in
     # Ensure local bin exists for symlinks
     mkdir -p ~/.local/bin
 
-    # FIX: bat -> batcat symlink
+    # FIX: bat -> batcat symlink (older Debian/Ubuntu: binary is batcat)
     if command -v batcat &> /dev/null && ! command -v bat &> /dev/null; then
         ln -sf $(which batcat) ~/.local/bin/bat
+    fi
+    # FIX: batcat -> bat symlink (Debian Trixie+: binary is bat)
+    if command -v bat &> /dev/null && ! command -v batcat &> /dev/null; then
+        ln -sf $(which bat) ~/.local/bin/batcat
     fi
 
     # FIX: fd -> fdfind symlink
