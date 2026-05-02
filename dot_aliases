@@ -89,7 +89,20 @@ alias ..='cd ..'
 alias ...='cd ../..'
 alias ....='cd ../../..'
 alias -- -='cd -'
-alias cdd='cd ~/docker'
+# Docker working dir: all LXCs use /docker. On a laptop, prefer putting each app
+# under ~/projects/<name>/ with compose next to the repo (cd there normally).
+# Use ~/docker only for loose / multi-stack sandboxes — then `cdd` finds it.
+cdd() {
+  if [[ -d /docker ]]; then
+    builtin cd /docker
+  elif [[ -d "${HOME}/docker" ]]; then
+    builtin cd "${HOME}/docker"
+  else
+    echo 'cdd: neither /docker nor ~/docker exists.' >&2
+    echo '  LXCs: use /docker. Laptop: mkdir ~/docker for ad-hoc stacks, or cd ~/projects/<app>.' >&2
+    return 1
+  fi
+}
 alias cmhome='cd ~/.local/share/chezmoi'
 
 # -----------------------------------------------------------------------------
