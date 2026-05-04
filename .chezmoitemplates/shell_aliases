@@ -9,7 +9,7 @@ alias ....='cd ../../..'
 alias m='micro'
 alias v='vim'
 alias decompress='tar -xzf'
-alias cdd='cd ~/docker'
+# cdd: defined as a function in dot_aliases (zsh errors if `cdd` stays an alias when defining cdd()).
 alias cmhome='cd ~/.local/share/chezmoi'
 
 # --- Proxmox / Homelab ---

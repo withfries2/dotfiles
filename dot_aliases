@@ -2,7 +2,7 @@
 # -----------------------------------------------------------------------------
 # 0. CLEANUP LEGACY DEFAULTS
 # -----------------------------------------------------------------------------
-unalias l alert egrep fgrep 2>/dev/null
+unalias l alert egrep fgrep cdd 2>/dev/null
 
 # -----------------------------------------------------------------------------
 # 1. GHOSTTY & PROXMOX SMART SSH
@@ -92,6 +92,7 @@ alias -- -='cd -'
 # Docker working dir: all LXCs use /docker. On a laptop, prefer putting each app
 # under ~/projects/<name>/ with compose next to the repo (cd there normally).
 # Use ~/docker only for loose / multi-stack sandboxes — then `cdd` finds it.
+unalias cdd 2>/dev/null
 cdd() {
   if [[ -d /docker ]]; then
     builtin cd /docker
