@@ -38,8 +38,9 @@ packages:
 # -----------------------------------------------------------------------------
 # Standalone Binaries (GitHub Releases)
 # -----------------------------------------------------------------------------
-# These are used by Section 4 of the install script to download tools 
+# These are used by Section 4 of the install script to download tools
 # not available in standard APT/Pacman repos.
+# fastfetch: installed in run_once_install_cli_tools.sh.tmpl section 2b (distro packages).
 binaries:
   - name: lazygit
     repo: jesseduffield/lazygit

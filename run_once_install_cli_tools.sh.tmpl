@@ -78,6 +78,38 @@ case "{{ $osid }}" in
     ;;
 esac
 
+# -----------------------------------------------------------------------------
+# 2b. FASTFETCH (distro packages — names/repos differ by OS)
+# -----------------------------------------------------------------------------
+if ! command -v fastfetch &> /dev/null; then
+  echo "📷 Installing fastfetch (OS-specific)..."
+  case "{{ $osid }}" in
+    pop|ubuntu|debian)
+      sudo apt install -y fastfetch \
+        || echo "⚠️ fastfetch: apt install failed (may be missing on older Debian; try backports or a GitHub release)." >&2
+      ;;
+    fedora)
+      sudo dnf install -y fastfetch \
+        || echo "⚠️ fastfetch: dnf install failed." >&2
+      ;;
+    arch)
+      sudo pacman -S --noconfirm fastfetch \
+        || echo "⚠️ fastfetch: pacman install failed." >&2
+      ;;
+    darwin)
+      if command -v brew &> /dev/null; then
+        brew install fastfetch \
+          || echo "⚠️ fastfetch: brew install failed." >&2
+      else
+        echo "⚠️ fastfetch: Homebrew not found; install brew first (darwin branch)." >&2
+      fi
+      ;;
+    *)
+      echo "⚠️ fastfetch: no package install path for OS '{{ $osid }}' (install manually if needed)." >&2
+      ;;
+  esac
+fi
+
 # --- Role-Specific Packages ---
 {{ if hasKey .packages.roles $role -}}
 echo "🎭 Installing extras for role: {{ $role }}..."
