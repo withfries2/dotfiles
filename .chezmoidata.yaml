@@ -7,6 +7,7 @@ packages:
       - base-devel
       - pacman-contrib
       - fd
+      - bat
     debian:
       - build-essential
       - bat
@@ -16,6 +17,7 @@ packages:
     darwin:
       - coreutils
       - fd
+      - bat
 
   # Packages with consistent names across Arch (Pacman), Debian (APT), and macOS (Brew)
   universal:

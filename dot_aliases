@@ -55,24 +55,28 @@ alias lt='eza --tree --level=2 --icons'
 alias lta='eza -a --tree --level=2 --icons'
 
 # bat: The modern cat
+# Note: always call it as `bat`, not `batcat`. `batcat` is a Debian/Ubuntu-only
+# binary name (renamed there due to a package clash); the install script
+# symlinks `bat` -> `batcat` on those systems so `bat` works everywhere.
+
 # 1. First, remove any existing alias to avoid function name conflicts
 unalias cat 2>/dev/null
 
 # 2. Define the smart function
 cat() {
-    # If no arguments (e.g., piping), just run batcat plain
+    # If no arguments (e.g., piping), just run bat plain
     if [ $# -eq 0 ]; then
-        command batcat --style=plain --paging=never --color=always
+        command bat --style=plain --paging=never --color=always
         return
     fi
 
     local target="$1"
     # If it's a template, force the specific long-form syntax name
     if [[ "$target" == *.tmpl ]]; then
-        command batcat --style=plain --paging=never --color=always --language="Bourne Again Shell (bash)" "$@"
+        command bat --style=plain --paging=never --color=always --language="Bourne Again Shell (bash)" "$@"
     else
         # For everything else, let bat detect it naturally
-        command batcat --style=plain --paging=never --color=always "$@"
+        command bat --style=plain --paging=never --color=always "$@"
     fi
 }
 

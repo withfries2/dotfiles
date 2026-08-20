@@ -12,10 +12,13 @@ hl.monitor({ output = "", mode = "preferred", position = "auto", scale = omarchy
 {{- if eq .chezmoi.hostname "geekom-a8-desktop" }}
 
 -- Primary monitor: LG UltraFine, unrotated.
-hl.monitor({ output = "DP-8", mode = "3840x2160@60", position = "0x0", scale = 1.25, transform = 0 })
+-- Matched by description (not DP-N port name): the DP port index can shift
+-- after sleep/resume, which was silently dropping this override and the
+-- rotation below.
+hl.monitor({ output = "desc:LG Electronics LG ULTRAFINE 605INBS2H205", mode = "3840x2160@60", position = "0x0", scale = 1.33, transform = 0 })
 
 -- Secondary monitor: LG HDR 4K, rotated 90° clockwise (transform: 1 = 90°, 3 = 270°).
-hl.monitor({ output = "DP-11", mode = "3840x2160@60", position = "auto", scale = 1.25, transform = 1 })
+hl.monitor({ output = "desc:LG Electronics LG HDR 4K 0x00060B07", mode = "3840x2160@60", position = "auto", scale = 1.33, transform = 1 })
 
 {{- else if eq .chezmoi.hostname "lg-gram-omarchy" }}
 
