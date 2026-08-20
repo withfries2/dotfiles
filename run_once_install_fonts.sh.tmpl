@@ -14,7 +14,7 @@ echo "OS ID: {{ $osid }} | Role: {{ $role }}"
 # -----------------------------------------------------------------------------
 # ARCH LINUX
 # -----------------------------------------------------------------------------
-{{- if eq $osid "arch" }}
+{{- if or (eq $osid "arch") (eq $osid "omarchy") }}
 echo "Checking Arch Linux fonts..."
 sudo pacman -S --needed --noconfirm ttf-meslo-nerd ttf-fira-code ttf-victor-mono-nerd
 # ... (rest of your existing Arch logic) ...
