@@ -115,7 +115,20 @@ alias cmd='chezmoi diff'
 alias cme='chezmoi edit'
 alias cmu='chezmoi update'
 alias cmr='cmu && cma && reload'
-alias reload='source ~/.bashrc || source ~/.zshrc'
+# Source the rc file matching whichever shell is actually running, rather
+# than always trying ~/.bashrc first — under zsh that used to eval bash-only
+# starship/zoxide init code (\[...\] prompt escapes zsh doesn't strip, plus a
+# bash-only `shopt` call), corrupting the prompt and erroring out.
+reload() {
+    if [ -n "${ZSH_VERSION:-}" ]; then
+        source ~/.zshrc
+    elif [ -n "${BASH_VERSION:-}" ]; then
+        source ~/.bashrc
+    else
+        echo "reload: unrecognized shell ($0), sourced nothing" >&2
+        return 1
+    fi
+}
 
 # -----------------------------------------------------------------------------
 # 6. GIT SHORTCUTS

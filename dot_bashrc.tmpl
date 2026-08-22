@@ -3,6 +3,12 @@
 # If not running interactively, don't do anything
 [[ $- != *i* ]] && return
 
+# Bail if this got sourced by a non-bash shell (e.g. zsh via a stray
+# `source ~/.bashrc`) — the starship/zoxide inits below emit bash-only
+# syntax (`shopt`, \[...\] prompt escapes) that corrupts a zsh session
+# instead of just failing cleanly.
+[ -n "${BASH_VERSION:-}" ] || return
+
 # --- PATH configuration ---
 # Ensure local binaries (Starship, eza, etc.) are prioritized
 export PATH="$HOME/.local/bin:/usr/local/bin:$PATH"
