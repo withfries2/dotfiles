@@ -5,6 +5,13 @@ Wants=network-online.target
 
 [Service]
 Type=notify
+# Leading '-': ignore failure. If the previous mount died without unmounting
+# cleanly (e.g. a file was still open elsewhere when systemd tried to stop
+# it), the mountpoint is left in a "Transport endpoint is not connected"
+# state, and even `mkdir -p` on an already-existing dir fails against it —
+# every restart then fails identically until this is cleared. Harmless if
+# nothing was actually mounted.
+ExecStartPre=-/usr/bin/fusermount3 -uz %h/GoogleDrive
 ExecStartPre=/usr/bin/mkdir -p %h/GoogleDrive
 ExecStart=/usr/bin/rclone mount gdrive: %h/GoogleDrive \
     --config %h/.config/rclone/rclone.conf \
