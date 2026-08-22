@@ -1,0 +1,21 @@
+#!/bin/bash
+# Enable/(re)start the rclone Google Drive mount whenever its unit file
+# changes. Desktop/laptop only — no Drive mount on server-role machines.
+#
+# Content hash so chezmoi re-runs this whenever the unit changes:
+# {{ include "dot_config/systemd/user/rclone-gdrive.service" | sha256sum }}
+set -euo pipefail
+
+{{ $role := index . "role" | default "desktop" -}}
+{{ if and (eq .chezmoi.os "linux") (ne $role "server") -}}
+if command -v systemctl &> /dev/null && [ -f "$HOME/.config/systemd/user/rclone-gdrive.service" ]; then
+    echo "🔄 Reloading systemd --user and enabling rclone-gdrive.service..."
+    systemctl --user daemon-reload
+    systemctl --user enable --now rclone-gdrive.service \
+        || echo "⚠️ Could not enable rclone-gdrive.service — check 'systemctl --user status rclone-gdrive.service' (needs rclone configured with a 'gdrive' remote)." >&2
+else
+    echo "ℹ️ Skipping rclone-gdrive mount setup (systemctl or unit file not found)."
+fi
+{{ else -}}
+echo "ℹ️ Skipping rclone-gdrive mount setup (role={{ $role }}, os={{ .chezmoi.os }})."
+{{ end -}}

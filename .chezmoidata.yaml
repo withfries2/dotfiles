@@ -30,8 +30,12 @@ packages:
   roles:
     desktop:
       - hyprland
+      - rclone
+      - fuse3
     laptop:
       - brightnessctl
+      - rclone
+      - fuse3
     server:
       - htop
 
