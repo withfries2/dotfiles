@@ -25,16 +25,17 @@ if [[ "${1:-}" == "family" ]]; then
 fi
 TARGET="${REMOTE}:ScanSnap"
 
-# Newest file in Downloads matching the extensions google-drive-sync.sh
-# (LXC 3010) actually accepts — Downloads collects a lot of non-scan
-# clutter, so mtime alone isn't a safe enough filter.
-latest=$(find "$DOWNLOADS" -maxdepth 1 -type f \
-    \( -iname '*.pdf' -o -iname '*.jpg' -o -iname '*.jpeg' \
-       -o -iname '*.png' -o -iname '*.tiff' \) \
+# Newest file in Downloads matching the HP scanner's actual output name.
+# It always saves as "NextDocument.pdf" (browsers append " (1)", " (2)", ...
+# on repeat scans before this script clears them out) — matching that exact
+# pattern is a far more precise scan-vs-clutter filter than any extension
+# whitelist. If HP ever changes this (firmware update, different Save As
+# preset), update the -iname pattern below.
+latest=$(find "$DOWNLOADS" -maxdepth 1 -type f -iname 'NextDocument*.pdf' \
     -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -n1 | cut -d' ' -f2-)
 
 if [[ -z "$latest" ]]; then
-    echo "No candidate files found in $DOWNLOADS" >&2
+    echo "No files matching NextDocument*.pdf found in $DOWNLOADS" >&2
     exit 1
 fi
 
@@ -42,13 +43,19 @@ filename=$(basename "$latest")
 size=$(du -h "$latest" | cut -f1)
 mtime=$(date -r "$latest" '+%Y-%m-%d %H:%M:%S')
 
+# HP reuses "NextDocument.pdf" for every scan, so the upload target is
+# stamped with a timestamp — otherwise scanning twice inside the ~10 min
+# window before google-drive-sync.sh (LXC 3010) picks the first one up
+# would have the second moveto silently overwrite it in Drive.
+dest_name="${filename%.pdf}_$(date +%Y%m%d-%H%M%S).pdf"
+
 echo "About to upload to $TARGET/:"
-echo "  $filename  ($size, modified $mtime)"
+echo "  $filename  ($size, modified $mtime)  ->  $dest_name"
 read -rp "Proceed? [y/N] " reply
 [[ "$reply" =~ ^[Yy]$ ]] || { echo "Cancelled."; exit 1; }
 
-rclone moveto "$latest" "$TARGET/$filename" --log-level ERROR
+rclone moveto "$latest" "$TARGET/$dest_name" --log-level ERROR
 
-echo "✓ Uploaded and removed local copy: $filename -> $TARGET/"
+echo "✓ Uploaded and removed local copy: $filename -> $TARGET/$dest_name"
 echo "  google-drive-sync.sh (LXC 3010) picks it up within 10 min, feeds it"
 echo "  to Paperless, and archives it back to ${REMOTE}:ScanSnap-Archive/ once confirmed."
