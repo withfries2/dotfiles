@@ -1,0 +1,52 @@
+#!/bin/bash
+# scan-upload — push the most recent file out of ~/Downloads into the Google
+# Drive ScanSnap folder that google-drive-sync.sh (LXC 3010) watches.
+#
+# Temporary bridge for the HP printer's browser-based scan workflow while the
+# ScanSnap iX500 is out of service. See docs/architecture-scans.md in the
+# proxmox-infrastructure repo for the full pipeline this feeds into: this
+# script's only job is Downloads -> Drive; ingestion, dedup, and archiving
+# back to Drive are all handled by the existing cron script on LXC 3010.
+#
+# Usage: scan-upload [family]
+#   (no arg)  -> gdrive:ScanSnap         (personal account)
+#   family    -> gdrive-family:ScanSnap  (family account)
+#
+# Requires: rclone configured with a "gdrive" and/or "gdrive-family" remote
+# (~/.config/rclone/rclone.conf — easiest to copy this from LXC 3010's
+# /root/.config/rclone/rclone.conf rather than re-running the OAuth flow).
+
+set -euo pipefail
+
+DOWNLOADS="$HOME/Downloads"
+REMOTE="gdrive"
+if [[ "${1:-}" == "family" ]]; then
+    REMOTE="gdrive-family"
+fi
+TARGET="${REMOTE}:ScanSnap"
+
+# Newest regular file in Downloads, skipping dotfiles and in-progress
+# browser downloads (.crdownload = Chrome/Chromium, .part = Firefox).
+latest=$(find "$DOWNLOADS" -maxdepth 1 -type f \
+    ! -name '.*' ! -name '*.crdownload' ! -name '*.part' \
+    -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -n1 | cut -d' ' -f2-)
+
+if [[ -z "$latest" ]]; then
+    echo "No candidate files found in $DOWNLOADS" >&2
+    exit 1
+fi
+
+filename=$(basename "$latest")
+size=$(du -h "$latest" | cut -f1)
+mtime=$(date -r "$latest" '+%Y-%m-%d %H:%M:%S')
+
+echo "About to upload to $TARGET/:"
+echo "  $filename  ($size, modified $mtime)"
+read -rp "Proceed? [y/N] " reply
+[[ "$reply" =~ ^[Yy]$ ]] || { echo "Cancelled."; exit 1; }
+
+rclone moveto "$latest" "$TARGET/$filename" --log-level ERROR
+
+echo "✓ Uploaded and removed local copy: $filename -> $TARGET/"
+echo "  google-drive-sync.sh (LXC 3010) picks it up within 10 min, feeds it"
+echo "  to Paperless, and archives it back to ${REMOTE}:ScanSnap-Archive/ once confirmed."
