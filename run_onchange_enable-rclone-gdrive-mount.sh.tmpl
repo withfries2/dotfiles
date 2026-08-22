@@ -9,10 +9,14 @@ set -euo pipefail
 {{ $role := index . "role" | default "desktop" -}}
 {{ if and (eq .chezmoi.os "linux") (ne $role "server") -}}
 if command -v systemctl &> /dev/null && [ -f "$HOME/.config/systemd/user/rclone-gdrive.service" ]; then
-    echo "🔄 Reloading systemd --user and enabling rclone-gdrive.service..."
+    echo "🔄 Reloading systemd --user and (re)starting rclone-gdrive.service..."
     systemctl --user daemon-reload
-    systemctl --user enable --now rclone-gdrive.service \
-        || echo "⚠️ Could not enable rclone-gdrive.service — check 'systemctl --user status rclone-gdrive.service' (needs rclone configured with a 'gdrive' remote)." >&2
+    systemctl --user enable rclone-gdrive.service
+    # restart, not enable --now: if the mount is already running, enable --now
+    # would leave it running with its OLD flags — a content change to the unit
+    # (e.g. a --vfs-cache-mode tweak) needs an actual restart to take effect.
+    systemctl --user restart rclone-gdrive.service \
+        || echo "⚠️ Could not (re)start rclone-gdrive.service — check 'systemctl --user status rclone-gdrive.service' (needs rclone configured with a 'gdrive' remote)." >&2
 else
     echo "ℹ️ Skipping rclone-gdrive mount setup (systemctl or unit file not found)."
 fi
