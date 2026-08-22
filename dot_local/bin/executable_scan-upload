@@ -1,5 +1,5 @@
 #!/bin/bash
-# scan-upload — push the most recent file out of ~/Downloads into the Google
+# scan-upload — push the most recent scan out of ~/Downloads into the Google
 # Drive ScanSnap folder that google-drive-sync.sh (LXC 3010) watches.
 #
 # Temporary bridge for the HP printer's browser-based scan workflow while the
@@ -25,10 +25,12 @@ if [[ "${1:-}" == "family" ]]; then
 fi
 TARGET="${REMOTE}:ScanSnap"
 
-# Newest regular file in Downloads, skipping dotfiles and in-progress
-# browser downloads (.crdownload = Chrome/Chromium, .part = Firefox).
+# Newest file in Downloads matching the extensions google-drive-sync.sh
+# (LXC 3010) actually accepts — Downloads collects a lot of non-scan
+# clutter, so mtime alone isn't a safe enough filter.
 latest=$(find "$DOWNLOADS" -maxdepth 1 -type f \
-    ! -name '.*' ! -name '*.crdownload' ! -name '*.part' \
+    \( -iname '*.pdf' -o -iname '*.jpg' -o -iname '*.jpeg' \
+       -o -iname '*.png' -o -iname '*.tiff' \) \
     -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -n1 | cut -d' ' -f2-)
 
 if [[ -z "$latest" ]]; then
