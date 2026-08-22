@@ -119,6 +119,9 @@ alias cmr='cmu && cma && reload'
 # than always trying ~/.bashrc first — under zsh that used to eval bash-only
 # starship/zoxide init code (\[...\] prompt escapes zsh doesn't strip, plus a
 # bash-only `shopt` call), corrupting the prompt and erroring out.
+# unalias first: zsh expands an existing alias while *parsing* a same-named
+# function definition, which mangles it (same reason cat()/cdd() do this).
+unalias reload 2>/dev/null
 reload() {
     if [ -n "${ZSH_VERSION:-}" ]; then
         source ~/.zshrc
