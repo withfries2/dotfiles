@@ -44,6 +44,12 @@ o.bind("SUPER + SHIFT + G", "Google Messages", { webapp = "https://messages.goog
 hl.unbind("SUPER + SHIFT + S")
 o.bind("SUPER + SHIFT + S", "Amazon", { webapp = "https://amazon.com" })
 
+-- === Capture ===
+
+-- Screenshot, second key of choice (key was free). No mode arg, so this
+-- defaults to "smart" -- same behavior as the default PRINT binding.
+o.bind("ALT + SHIFT + S", "Screenshot", "omarchy-capture-screenshot")
+
 -- === Floating window nudging ===
 
 -- Move the focused floating window with Vim-style HJKL.
