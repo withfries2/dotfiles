@@ -20,6 +20,15 @@ hl.monitor({ output = "desc:LG Electronics LG ULTRAFINE 605INBS2H205", mode = "3
 -- Secondary monitor: LG HDR 4K, rotated 90° clockwise (transform: 1 = 90°, 3 = 270°).
 hl.monitor({ output = "desc:LG Electronics LG HDR 4K 0x00060B07", mode = "3840x2160@60", position = "auto", scale = 1.33, transform = 1 })
 
+-- Pin workspaces to monitors. Matched by description for the same reason as
+-- the monitor overrides above (DP-N port names can shift after sleep/resume).
+-- Workspace-to-app pins live in hypr/windows.lua (not host-specific).
+hl.workspace_rule({ workspace = "1", monitor = "desc:LG Electronics LG ULTRAFINE 605INBS2H205" })
+hl.workspace_rule({ workspace = "2", monitor = "desc:LG Electronics LG ULTRAFINE 605INBS2H205" })
+hl.workspace_rule({ workspace = "3", monitor = "desc:LG Electronics LG ULTRAFINE 605INBS2H205" })
+hl.workspace_rule({ workspace = "4", monitor = "desc:LG Electronics LG ULTRAFINE 605INBS2H205" })
+hl.workspace_rule({ workspace = "5", monitor = "desc:LG Electronics LG HDR 4K 0x00060B07" })
+
 {{- else if eq .chezmoi.hostname "lg-gram-omarchy" }}
 
 -- LG Gram (1080p) - keep at 1x for sharpness.
