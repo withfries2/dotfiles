@@ -87,7 +87,19 @@ alias lg='lazygit'
 alias du='duf'
 
 # -----------------------------------------------------------------------------
-# 4. NAVIGATION & DIRECTORIES
+# 4. FZF
+# -----------------------------------------------------------------------------
+# Omarchy default: kitty gets an image-aware preview via icat, everything
+# else (Ghostty included) gets a plain bat preview.
+if [[ "$TERM" == "xterm-kitty" ]]; then
+  alias ff="fzf --preview 'case \$(file --mime-type -b {}) in image/*) kitty icat --clear --transfer-mode=memory --stdin=no --place=\${FZF_PREVIEW_COLUMNS}x\${FZF_PREVIEW_LINES}@0x0 {} ;; *) bat --style=numbers --color=always {} ;; esac'"
+else
+  alias ff="fzf --preview 'bat --style=numbers --color=always {}'"
+fi
+alias eff='$EDITOR "$(ff)"'
+
+# -----------------------------------------------------------------------------
+# 5. NAVIGATION & DIRECTORIES
 # -----------------------------------------------------------------------------
 alias ..='cd ..'
 alias ...='cd ../..'
@@ -111,7 +123,7 @@ cdd() {
 alias cmhome='cd ~/.local/share/chezmoi'
 
 # -----------------------------------------------------------------------------
-# 5. CHEZMOI MANAGEMENT
+# 6. CHEZMOI MANAGEMENT
 # -----------------------------------------------------------------------------
 alias cm='chezmoi'
 alias cma='chezmoi apply -v'
@@ -138,7 +150,7 @@ reload() {
 }
 
 # -----------------------------------------------------------------------------
-# 6. GIT SHORTCUTS
+# 7. GIT SHORTCUTS
 # -----------------------------------------------------------------------------
 alias g='git'
 alias gs='git status'
@@ -149,7 +161,7 @@ alias gp='git push'
 alias gl='git log --oneline --graph --decorate'
 
 # -----------------------------------------------------------------------------
-# 7. DOCKER & CONTAINER OPS
+# 8. DOCKER & CONTAINER OPS
 # -----------------------------------------------------------------------------
 alias d='docker'
 alias dc='docker compose'
