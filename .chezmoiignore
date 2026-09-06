@@ -1,3 +1,6 @@
 {{- if eq .chezmoi.os "darwin" }}
 .bashrc
 {{- end }}
+{{- if ne .osid "omarchy" }}
+.local/bin/fix-terminal-font-size
+{{- end }}

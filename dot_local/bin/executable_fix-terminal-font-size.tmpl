@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Restores the terminal font size to 11pt, independent of the Omarchy shell's
+# Text Size slider (`omarchy display text size`). That slider anchors terminal
+# font size to shell px * 9/12, which makes for a too-small terminal font at
+# the otherwise-comfortable 12px shell setting. Run this after touching the
+# slider/CLI, since it overwrites these three files with its anchor value.
+set -euo pipefail
+
+PT=11
+
+if [ -f ~/.config/alacritty/alacritty.toml ]; then
+  sed -i -E "s/^size[[:space:]]*=.*/size = $PT/" ~/.config/alacritty/alacritty.toml
+fi
+
+if [ -f ~/.config/ghostty/config ]; then
+  sed -i -E "s/^font-size = .*/font-size = $PT/" ~/.config/ghostty/config
+  pkill -SIGUSR2 ghostty 2>/dev/null || true
+fi
+
+if [ -f ~/.config/foot/foot.ini ]; then
+  sed -i -E "s/(:size=)[0-9.]+/\1$PT/" ~/.config/foot/foot.ini
+  # Foot has no reload signal; running instances keep their old size until
+  # relaunched (new windows pick it up immediately).
+  if pgrep -x foot >/dev/null 2>&1; then
+    notify-send -u low "Restart foot to apply the new terminal font size" 2>/dev/null || true
+  fi
+fi
+
+echo "Terminal font size set to ${PT}pt."
