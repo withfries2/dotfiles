@@ -4,6 +4,11 @@
 [main]
 include=~/.local/state/omarchy/current/theme/foot.ini
 term=xterm-256color
+# Deliberately decoupled from `omarchy display text size` (12px shell there
+# would anchor this to 9pt): 12px shell is the comfortable UI size, but its
+# 9pt terminal anchor is too small, so this is pinned to 11pt independently.
+# Touching that slider/CLI again will silently overwrite this back down to
+# its anchor value -- rerun ~/.local/bin/fix-terminal-font-size to restore.
 font=JetBrainsMono Nerd Font:size=11
 pad=14x14
 initial-window-mode=windowed
