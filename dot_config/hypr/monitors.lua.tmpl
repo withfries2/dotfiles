@@ -11,23 +11,23 @@ hl.monitor({ output = "", mode = "preferred", position = "auto", scale = omarchy
 -- --- Host-Specific Overrides ---
 {{- if eq .chezmoi.hostname "geekom-a8-desktop" }}
 
--- Primary monitor: LG UltraFine, unrotated.
+-- Right monitor: LG UltraFine, rotated 90° clockwise.
 -- Matched by description (not DP-N port name): the DP port index can shift
 -- after sleep/resume, which was silently dropping this override and the
 -- rotation below.
-hl.monitor({ output = "desc:LG Electronics LG ULTRAFINE 605INBS2H205", mode = "3840x2160@60", position = "0x0", scale = 1.33, transform = 0 })
+hl.monitor({ output = "desc:LG Electronics LG ULTRAFINE 605INBS2H205", mode = "3840x2160@60", position = "2880x0", scale = 1.33, transform = 1 })
 
--- Secondary monitor: LG HDR 4K, rotated 90° clockwise (transform: 1 = 90°, 3 = 270°).
-hl.monitor({ output = "desc:LG Electronics LG HDR 4K 0x00060B07", mode = "3840x2160@60", position = "auto", scale = 1.33, transform = 1 })
+-- Primary monitor: LG HDR 4K, landscape.
+hl.monitor({ output = "desc:LG Electronics LG HDR 4K 0x00060B07", mode = "3840x2160@60", position = "0x630", scale = 1.33, transform = 0 })
 
 -- Pin workspaces to monitors. Matched by description for the same reason as
 -- the monitor overrides above (DP-N port names can shift after sleep/resume).
 -- Workspace-to-app pins live in hypr/windows.lua (not host-specific).
-hl.workspace_rule({ workspace = "1", monitor = "desc:LG Electronics LG ULTRAFINE 605INBS2H205" })
-hl.workspace_rule({ workspace = "2", monitor = "desc:LG Electronics LG ULTRAFINE 605INBS2H205" })
-hl.workspace_rule({ workspace = "3", monitor = "desc:LG Electronics LG ULTRAFINE 605INBS2H205" })
-hl.workspace_rule({ workspace = "4", monitor = "desc:LG Electronics LG ULTRAFINE 605INBS2H205" })
-hl.workspace_rule({ workspace = "5", monitor = "desc:LG Electronics LG HDR 4K 0x00060B07" })
+hl.workspace_rule({ workspace = "1", monitor = "desc:LG Electronics LG HDR 4K 0x00060B07" })
+hl.workspace_rule({ workspace = "2", monitor = "desc:LG Electronics LG HDR 4K 0x00060B07" })
+hl.workspace_rule({ workspace = "3", monitor = "desc:LG Electronics LG HDR 4K 0x00060B07" })
+hl.workspace_rule({ workspace = "4", monitor = "desc:LG Electronics LG HDR 4K 0x00060B07" })
+hl.workspace_rule({ workspace = "5", monitor = "desc:LG Electronics LG ULTRAFINE 605INBS2H205" })
 
 {{- else if eq .chezmoi.hostname "lg-gram-omarchy" }}
 

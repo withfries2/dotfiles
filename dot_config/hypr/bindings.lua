@@ -13,11 +13,10 @@ o.bind("SUPER + SHIFT + C", "VS Code", "code")
 -- Activity (btop) — duplicate of the default SUPER+CTRL+T, kept on its old key too.
 o.bind("SUPER + SHIFT + T", "Activity", { tui = "btop" })
 
--- === Web apps ===
+-- Calculator (keeps the default Calculator binding on SUPER+CTRL+Q too)
+o.bind("SUPER + SHIFT + Q", "Calculator", "omacalc")
 
--- Claude (overrides the default ChatGPT binding on SUPER+SHIFT+A)
-hl.unbind("SUPER + SHIFT + A")
-o.bind("SUPER + SHIFT + A", "Claude", { webapp = "https://claude.ai" })
+-- === Web apps ===
 
 -- Google Calendar (key was free, no default binding there)
 o.bind("SUPER + SHIFT + L", "Google Calendar", { webapp = "https://calendar.google.com/" })
@@ -29,10 +28,6 @@ o.bind("SUPER + SHIFT + E", "Gmail", { webapp = "https://mail.google.com/" })
 -- Feedly (overrides the default Editor launcher on SUPER+SHIFT+N)
 hl.unbind("SUPER + SHIFT + N")
 o.bind("SUPER + SHIFT + N", "Feedly", { webapp = "https://feedly.com" })
-
--- Amazon Music (overrides the default Music TUI/cliamp binding on SUPER+SHIFT+ALT+M)
-hl.unbind("SUPER + SHIFT + ALT + M")
-o.bind("SUPER + SHIFT + ALT + M", "Amazon Music", { webapp = "https://music.amazon.com" })
 
 -- Google Messages (overrides the default Signal binding on SUPER+SHIFT+G --
 -- Signal wasn't used per the old dotfiles anyway. Google Messages is still
