@@ -1,0 +1,20 @@
+#!/bin/bash
+# Install the udev rule required by Keychron Launcher to access the keyboard
+# firmware through hidraw without requiring root.
+
+set -euo pipefail
+
+rule_file="/etc/udev/rules.d/70-keychron.rules"
+rule='KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="3434", MODE="0660", TAG+="uaccess"'
+
+if [[ "$EUID" -eq 0 ]]; then
+  install -D -m 0644 /dev/stdin "$rule_file" <<<"$rule"
+  udevadm control --reload-rules
+  udevadm trigger --subsystem-match=hidraw
+else
+  command sudo install -D -m 0644 /dev/stdin "$rule_file" <<<"$rule"
+  command sudo udevadm control --reload-rules
+  command sudo udevadm trigger --subsystem-match=hidraw
+fi
+
+echo "Installed $rule_file"
